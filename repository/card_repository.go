@@ -22,6 +22,7 @@ type CardRepository interface {
 	ByDeckId(id int64) ([]model.Card, error)
 	Update(id int64, card model.Card) error
 	Delete(id int64) error
+	CreateWrong(wrong model.WrongAnswer) (int64, error)
 	WrongById(id int64) ([]model.Card, error)
 	UpdateWrong(id int64, wrong model.WrongAnswer) error
 	DeleteWrong(id int64) error
@@ -34,6 +35,7 @@ type CardRepositoryImpl struct {
 	ByIdStmt        *sql.Stmt
 	ByDeckIdStmt    *sql.Stmt
 	DeleteStmt      *sql.Stmt
+	CreateWrongStmt *sql.Stmt
 	WrongByIdStmt   *sql.Stmt
 	DeleteWrongStmt *sql.Stmt
 }
@@ -54,11 +56,6 @@ func (repo *CardRepositoryImpl) InitStatements() error {
 	// 	return err
 	// }
 
-	// repo.CreateWrongStmt, err = repo.db.Prepare("INSERT INTO WRONG_ANSWER (card_id, answer) VALUES (?, ?)")
-	// if err != nil {
-	// 	return err
-	// }
-
 	repo.ByIdStmt, err = repo.db.Prepare("SELECT * FROM CARD WHERE card_id = ?")
 	if err != nil {
 		return err
@@ -70,6 +67,11 @@ func (repo *CardRepositoryImpl) InitStatements() error {
 	}
 
 	repo.DeleteStmt, err = repo.db.Prepare("DELETE FROM CARD WHERE card_id = ?")
+	if err != nil {
+		return err
+	}
+
+	repo.CreateWrongStmt, err = repo.db.Prepare("INSERT INTO WRONG_ANSWER (card_id, answer) VALUES (?, ?)")
 	if err != nil {
 		return err
 	}
@@ -233,6 +235,14 @@ func (r *CardRepositoryImpl) Delete(id int64) error {
 	}
 
 	return nil
+}
+
+func (r *CardRepositoryImpl) CreateWrong(wrong model.WrongAnswer) (int64, error) {
+	result, err := r.CreateWrongStmt.Exec(wrong.CardID, wrong.Answer)
+	if err != nil {
+		return 0, err
+	}
+	return result.LastInsertId()
 }
 
 func (r *CardRepositoryImpl) WrongById(id int64) ([]model.WrongAnswer, error) {
