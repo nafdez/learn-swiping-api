@@ -2,19 +2,14 @@ package repository
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
+	"learn-swiping-api/erro"
 	"learn-swiping-api/model"
 	"log"
 	"strings"
 	"time"
 
 	"github.com/go-sql-driver/mysql"
-)
-
-var (
-	ErrUserNotFound      = errors.New("user not found")
-	ErrUserAlreadyExists = errors.New("user already exists")
 )
 
 type UserRepository interface {
@@ -71,7 +66,7 @@ func (r *UserRepositoryImpl) Create(user model.User) (int64, error) {
 	result, err := r.CreateStmt.Exec(user.Username, user.Password, user.Email, user.Name)
 	if err != nil {
 		if err.(*mysql.MySQLError).Number == 1062 {
-			return 0, ErrUserAlreadyExists
+			return 0, erro.ErrUserExists
 		}
 		return 0, err
 	}
@@ -158,7 +153,7 @@ func (r *UserRepositoryImpl) Update(id int64, user model.User) error {
 	}
 
 	if rowsAffected == 0 {
-		return ErrUserNotFound
+		return erro.ErrUserNotFound
 	}
 
 	return nil
@@ -176,7 +171,7 @@ func (r *UserRepositoryImpl) Delete(id int64) error {
 	}
 
 	if affected == 0 {
-		return ErrUserNotFound
+		return erro.ErrUserNotFound
 	}
 
 	return nil

@@ -2,19 +2,14 @@ package repository
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
+	"learn-swiping-api/erro"
 	"learn-swiping-api/model"
 	"log"
 	"strings"
 	"time"
 
 	"github.com/go-sql-driver/mysql"
-)
-
-var (
-	ErrDeckNotFound      = errors.New("deck not found")
-	ErrDeckAlreadyExists = errors.New("deck already exists")
 )
 
 type DeckRepository interface {
@@ -78,7 +73,7 @@ func (r *DeckRepositoryImpl) Create(deck model.Deck) (int64, error) {
 	result, err := r.CreateStmt.Exec(deck.Owner, deck.Title, deck.Description)
 	if err != nil {
 		if err.(*mysql.MySQLError).Number == 1452 {
-			return 0, ErrUserNotFound
+			return 0, erro.ErrUserNotFound
 		}
 		return 0, err
 	}
@@ -186,7 +181,7 @@ func (r *DeckRepositoryImpl) Update(id int64, deck model.Deck) error {
 	}
 
 	if affected == 0 {
-		return ErrDeckNotFound
+		return erro.ErrDeckNotFound
 	}
 
 	return nil
@@ -204,7 +199,7 @@ func (r *DeckRepositoryImpl) Delete(id int64) error {
 	}
 
 	if affected == 0 {
-		return ErrDeckNotFound
+		return erro.ErrDeckNotFound
 	}
 
 	return nil

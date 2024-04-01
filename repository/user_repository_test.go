@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"learn-swiping-api/erro"
 	"learn-swiping-api/model"
 	"log"
 	"math/rand/v2"
@@ -67,7 +68,7 @@ func TestCreate(t *testing.T) {
 	for _, testcase := range testcases {
 		lastId, err := userRepository.Create(testcase)
 		if err != nil {
-			if err == ErrUserAlreadyExists {
+			if err == erro.ErrUserExists {
 				t.Error(testcase, "already exists")
 			}
 			t.Error(err)

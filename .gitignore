@@ -17,5 +17,8 @@
 # Go workspace file
 go.work
 
+# vscode files
+.vscode
+
 .env
 

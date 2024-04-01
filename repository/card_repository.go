@@ -2,18 +2,13 @@ package repository
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
+	"learn-swiping-api/erro"
 	"learn-swiping-api/model"
 	"log"
 	"strings"
 
 	"github.com/go-sql-driver/mysql"
-)
-
-var (
-	ErrCardNotFound      = errors.New("card not found")
-	ErrCardAlreadyExists = errors.New("card already exists")
 )
 
 type CardRepository interface {
@@ -113,7 +108,7 @@ func (r *CardRepositoryImpl) Create(card model.Card, wrong []model.WrongAnswer) 
 	if err != nil {
 		tx.Rollback()
 		if err.(*mysql.MySQLError).Number == 1452 {
-			return 0, ErrDeckNotFound
+			return 0, erro.ErrDeckNotFound
 		}
 		return 0, err
 	}
@@ -212,7 +207,7 @@ func (r *CardRepositoryImpl) Update(id int64, card model.Card) error {
 	}
 
 	if affected == 0 {
-		return ErrCardNotFound
+		return erro.ErrCardNotFound
 	}
 
 	return nil
@@ -231,7 +226,7 @@ func (r *CardRepositoryImpl) Delete(id int64) error {
 	}
 
 	if affected == 0 {
-		return ErrCardNotFound
+		return erro.ErrCardNotFound
 	}
 
 	return nil
@@ -293,7 +288,7 @@ func (r *CardRepositoryImpl) UpdateWrong(id int64, wrong model.WrongAnswer) erro
 	}
 
 	if affected == 0 {
-		return ErrCardNotFound
+		return erro.ErrCardNotFound
 	}
 
 	return nil
@@ -311,7 +306,7 @@ func (r *CardRepositoryImpl) DeleteWrong(id int64) error {
 	}
 
 	if affected == 0 {
-		return ErrCardNotFound
+		return erro.ErrCardNotFound
 	}
 
 	return nil

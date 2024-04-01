@@ -1,7 +1,9 @@
 package controller
 
 import (
+	"learn-swiping-api/model/dto/user"
 	"learn-swiping-api/service"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
@@ -25,6 +27,18 @@ func NewUserController(service service.UserService) UserController {
 }
 
 func (c *UserControllerImpl) Register(ctx *gin.Context) {
+	var request user.RegisterRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	}
+
+	user, err := c.service.Register(request)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusCreated, user)
 }
 
 func (c *UserControllerImpl) Login(ctx *gin.Context) {
