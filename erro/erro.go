@@ -13,4 +13,6 @@ var (
 	ErrDeckExists   = errors.New("deck already exists")
 	ErrCardNotFound = errors.New("card not found")
 	ErrCardExists   = errors.New("card already exists")
+
+	ErrBadField = errors.New("field is empty or invalid")
 )

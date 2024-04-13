@@ -16,6 +16,7 @@ type UserRepository interface {
 	Create(model.User) (int64, error)
 	ById(id int64) (model.User, error)
 	ByUsername(username string) (model.User, error)
+	ByToken(token string) (model.User, error)
 	Update(id int64, user model.User) error
 	Delete(id int64) error
 }
@@ -119,6 +120,35 @@ func (r *UserRepositoryImpl) ByUsername(username string) (model.User, error) {
 	return user, nil
 }
 
+func (r *UserRepositoryImpl) ByToken(token string) (model.User, error) {
+	var user model.User
+	// Checking token expire date on repository just for simplicity as is strange this is going to change
+	// or cause problems
+	stmt, err := r.db.Prepare("SELECT * FROM ACCOUNT WHERE token = ? AND token_expire >= NOW();")
+	if err != nil {
+		return model.User{}, err
+	}
+
+	row := stmt.QueryRow(token)
+
+	err = row.Scan(
+		&user.ID,
+		&user.Username,
+		&user.Email,
+		&user.Password,
+		&user.Name,
+		&user.Token,
+		&user.TokenExpires,
+		&user.Since,
+		&user.LastSeen,
+	)
+	if err != nil {
+		return model.User{}, err
+	}
+
+	return user, nil
+}
+
 func (r *UserRepositoryImpl) Update(id int64, user model.User) error {
 	var query strings.Builder
 	var args []any
@@ -132,7 +162,7 @@ func (r *UserRepositoryImpl) Update(id int64, user model.User) error {
 	updateField(&query, &args, "name", user.Name)
 	updateField(&query, &args, "token", user.Token)
 	updateField(&query, &args, "token_expire", user.TokenExpires)
-	updateField(&query, &args, "last_seen", user.LastSeen)
+	updateField(&query, &args, "last_seen", time.Now())
 
 	args = append(args, id)
 	query.WriteString(" WHERE acc_id = ?")

@@ -1,6 +1,9 @@
 package controller
 
 import (
+	"errors"
+	"learn-swiping-api/erro"
+	"learn-swiping-api/model"
 	"learn-swiping-api/model/dto/user"
 	"learn-swiping-api/service"
 	"net/http"
@@ -30,6 +33,7 @@ func (c *UserControllerImpl) Register(ctx *gin.Context) {
 	var request user.RegisterRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
 	}
 
 	user, err := c.service.Register(request)
@@ -42,19 +46,137 @@ func (c *UserControllerImpl) Register(ctx *gin.Context) {
 }
 
 func (c *UserControllerImpl) Login(ctx *gin.Context) {
+	var request user.LoginRequest
+	var tokenReq user.TokenRequest
+
+	err := ctx.ShouldBindJSON(&request)
+	tokenErr := ctx.ShouldBindJSON(&tokenReq)
+	if err != nil && tokenErr != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var user model.User
+	if err == nil {
+		user, err = c.service.Login(request)
+	} else if tokenErr == nil {
+		user, err = c.service.Token(tokenReq)
+	} else {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err != nil {
+		if errors.Is(err, erro.ErrUserNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		} else if errors.Is(err, erro.ErrInvalidToken) {
+			ctx.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, user)
 }
 
 func (c *UserControllerImpl) Logout(ctx *gin.Context) {
+	var request user.TokenRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	err := c.service.Logout(request)
+	if err != nil {
+		if errors.Is(err, erro.ErrInvalidToken) {
+			ctx.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{})
 }
 
 func (c *UserControllerImpl) Account(ctx *gin.Context) {
+	var request user.TokenRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	user, err := c.service.Account(request)
+	if err != nil {
+		if errors.Is(err, erro.ErrInvalidToken) {
+			ctx.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, user)
 }
 
 func (c *UserControllerImpl) User(ctx *gin.Context) {
+	var request user.PublicRequest
+
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	user, err := c.service.User(request)
+	if err != nil {
+		if errors.Is(err, erro.ErrUserNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, user)
 }
 
 func (c *UserControllerImpl) Update(ctx *gin.Context) {
+	var request user.UpdateRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	err := c.service.Update(request)
+	if err != nil {
+		if errors.Is(err, erro.ErrInvalidToken) {
+			ctx.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{})
 }
 
 func (c *UserControllerImpl) Delete(ctx *gin.Context) {
+	var request user.TokenRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	err := c.service.Delete(request)
+	if err != nil {
+		if errors.Is(err, erro.ErrInvalidToken) {
+			ctx.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{})
 }
