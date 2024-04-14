@@ -37,7 +37,7 @@ func NewUserService(repository repository.UserRepository) UserService {
 }
 
 func (s *UserServiceImpl) Register(request user.RegisterRequest) (model.User, error) {
-	if request.Username != "" || request.Password != "" || request.Email != "" || request.Name != "" {
+	if request.Username == "" || request.Password == "" || request.Email == "" || request.Name == "" {
 		return model.User{}, erro.ErrBadField
 	}
 
@@ -46,11 +46,18 @@ func (s *UserServiceImpl) Register(request user.RegisterRequest) (model.User, er
 		return model.User{}, err
 	}
 
+	token, err := s.generateToken()
+	if err != nil {
+		return model.User{}, err
+	}
+
 	user := model.User{
-		Username: request.Username,
-		Password: hash,
-		Email:    request.Email,
-		Name:     request.Name,
+		Username:     request.Username,
+		Password:     hash,
+		Email:        request.Email,
+		Name:         request.Name,
+		Token:        token,
+		TokenExpires: time.Now().AddDate(0, 0, 7),
 	}
 
 	id, err := s.repository.Create(user)
@@ -72,6 +79,12 @@ func (s *UserServiceImpl) Login(request user.LoginRequest) (model.User, error) {
 	}
 
 	if s.checkPasswordHash(request.Password, user.Password) {
+		token, err := s.updateToken(user.Token)
+		if err != nil {
+			return model.User{}, err
+		}
+
+		user.Token = token
 		return user, nil
 	}
 
