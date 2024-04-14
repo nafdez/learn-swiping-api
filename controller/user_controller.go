@@ -42,7 +42,7 @@ func (c *UserControllerImpl) Register(ctx *gin.Context) {
 			ctx.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 			return
 		}
-		if errors.Is(err, erro.ErrBadField) {
+		if errors.Is(err, erro.ErrBadField) || errors.Is(err, erro.ErrInvalidEmail) {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
@@ -89,14 +89,9 @@ func (c *UserControllerImpl) Token(ctx *gin.Context) {
 
 	user, err := c.service.Token(request)
 	if err != nil {
-		if errors.Is(err, erro.ErrUserNotFound) {
-			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		if errors.Is(err, erro.ErrInvalidToken) || errors.Is(err, erro.ErrUserNotFound) {
+			ctx.JSON(http.StatusUnauthorized, gin.H{"error": erro.ErrInvalidToken.Error()})
 			return
-		} else if errors.Is(err, erro.ErrBadField) {
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		} else if errors.Is(err, erro.ErrInvalidToken) {
-			ctx.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -114,8 +109,8 @@ func (c *UserControllerImpl) Logout(ctx *gin.Context) {
 
 	err := c.service.Logout(request)
 	if err != nil {
-		if errors.Is(err, erro.ErrInvalidToken) {
-			ctx.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		if errors.Is(err, erro.ErrInvalidToken) || errors.Is(err, erro.ErrUserNotFound) {
+			ctx.JSON(http.StatusUnauthorized, gin.H{"error": erro.ErrInvalidToken.Error()})
 			return
 		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -134,8 +129,8 @@ func (c *UserControllerImpl) Account(ctx *gin.Context) {
 
 	user, err := c.service.Account(request)
 	if err != nil {
-		if errors.Is(err, erro.ErrInvalidToken) {
-			ctx.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		if errors.Is(err, erro.ErrInvalidToken) || errors.Is(err, erro.ErrUserNotFound) {
+			ctx.JSON(http.StatusUnauthorized, gin.H{"error": erro.ErrInvalidToken.Error()})
 			return
 		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -146,13 +141,6 @@ func (c *UserControllerImpl) Account(ctx *gin.Context) {
 }
 
 func (c *UserControllerImpl) User(ctx *gin.Context) {
-	// var request user.PublicRequest
-
-	// if err := ctx.ShouldBindJSON(&request); err != nil {
-	// 	ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-	// 	return
-	// }
-
 	username := ctx.Param("username")
 
 	user, err := c.service.User(user.PublicRequest{Username: username})
@@ -177,8 +165,12 @@ func (c *UserControllerImpl) Update(ctx *gin.Context) {
 
 	err := c.service.Update(request)
 	if err != nil {
-		if errors.Is(err, erro.ErrInvalidToken) {
-			ctx.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		if errors.Is(err, erro.ErrInvalidToken) || errors.Is(err, erro.ErrUserNotFound) {
+			ctx.JSON(http.StatusUnauthorized, gin.H{"error": erro.ErrInvalidToken.Error()})
+			return
+		}
+		if errors.Is(err, erro.ErrBadField) || errors.Is(err, erro.ErrInvalidEmail) {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -197,8 +189,8 @@ func (c *UserControllerImpl) Delete(ctx *gin.Context) {
 
 	err := c.service.Delete(request)
 	if err != nil {
-		if errors.Is(err, erro.ErrInvalidToken) {
-			ctx.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		if errors.Is(err, erro.ErrInvalidToken) || errors.Is(err, erro.ErrUserNotFound) {
+			ctx.JSON(http.StatusUnauthorized, gin.H{"error": erro.ErrInvalidToken.Error()})
 			return
 		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

@@ -138,6 +138,7 @@ func (s *UserServiceImpl) Account(request user.TokenRequest) (model.User, error)
 
 // Returns an account details but with some fields hidden
 func (s *UserServiceImpl) User(request user.PublicRequest) (user.Public, error) {
+	// TODO: Also return a list of it's public decks
 	if request.Username == "" {
 		return user.Public{}, erro.ErrBadField
 	}
@@ -172,7 +173,7 @@ func (s *UserServiceImpl) Update(request user.UpdateRequest) error {
 
 	user, err := s.repository.ByToken(request.Token)
 	if err != nil {
-		return err
+		return erro.ErrInvalidToken
 	}
 
 	hash, err := s.hashPassword(request.Password)
