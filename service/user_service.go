@@ -71,12 +71,7 @@ func (s *UserServiceImpl) Login(request user.LoginRequest) (model.User, error) {
 		return model.User{}, err
 	}
 
-	hash, err := s.hashPassword(request.Password)
-	if err != nil {
-		return model.User{}, err
-	}
-
-	if user.Password == hash {
+	if s.checkPasswordHash(request.Password, user.Password) {
 		return user, nil
 	}
 

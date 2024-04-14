@@ -121,14 +121,16 @@ func (c *UserControllerImpl) Account(ctx *gin.Context) {
 }
 
 func (c *UserControllerImpl) User(ctx *gin.Context) {
-	var request user.PublicRequest
+	// var request user.PublicRequest
 
-	if err := ctx.ShouldBindJSON(&request); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
+	// if err := ctx.ShouldBindJSON(&request); err != nil {
+	// 	ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	// 	return
+	// }
 
-	user, err := c.service.User(request)
+	username := ctx.Param("username")
+
+	user, err := c.service.User(user.PublicRequest{Username: username})
 	if err != nil {
 		if errors.Is(err, erro.ErrUserNotFound) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
