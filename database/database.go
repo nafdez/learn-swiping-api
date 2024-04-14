@@ -24,7 +24,7 @@ func Connect() (*sql.DB, error) {
 
 	_ = mysql.Config{}
 
-	db, err := sql.Open("mysql", fmt.Sprintf("%v:%v@tcp(%v)/%v", user, pass, url, dbName))
+	db, err := sql.Open("mysql", fmt.Sprintf("%v:%v@tcp(%v)/%v?parseTime=true", user, pass, url, dbName))
 	if err != nil {
 		return nil, ErrConnFailed
 	}
