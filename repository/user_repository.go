@@ -40,7 +40,7 @@ func NewUserRepository(db *sql.DB) *UserRepositoryImpl {
 
 func (r *UserRepositoryImpl) InitStatements() error {
 	var err error
-	r.CreateStmt, err = r.db.Prepare("INSERT INTO ACCOUNT (username, passwd, email, name) VALUES (?, ?, ?, ?)")
+	r.CreateStmt, err = r.db.Prepare("INSERT INTO ACCOUNT (username, passwd, email, name, token, token_expire) VALUES (?, ?, ?, ?, ?, ?)")
 	if err != nil {
 		return err
 	}
@@ -64,7 +64,8 @@ func (r *UserRepositoryImpl) InitStatements() error {
 }
 
 func (r *UserRepositoryImpl) Create(user model.User) (int64, error) {
-	result, err := r.CreateStmt.Exec(user.Username, user.Password, user.Email, user.Name)
+	// TODO: make this method take undetermined number of user parameters to create a new user
+	result, err := r.CreateStmt.Exec(user.Username, user.Password, user.Email, user.Name, user.Token, user.TokenExpires)
 	if err != nil {
 		if err.(*mysql.MySQLError).Number == 1062 {
 			return 0, erro.ErrUserExists
@@ -75,53 +76,16 @@ func (r *UserRepositoryImpl) Create(user model.User) (int64, error) {
 }
 
 func (r *UserRepositoryImpl) ById(id int64) (model.User, error) {
-	var user model.User
 	row := r.ByIdStmt.QueryRow(id)
-
-	err := row.Scan(
-		&user.ID,
-		&user.Username,
-		&user.Email,
-		&user.Password,
-		&user.Name,
-		&user.Token,
-		&user.TokenExpires,
-		&user.Since,
-		&user.LastSeen,
-	)
-
-	if err != nil {
-		return model.User{}, err
-	}
-
-	return user, nil
+	return scanUser(row)
 }
 
 func (r *UserRepositoryImpl) ByUsername(username string) (model.User, error) {
-	var user model.User
 	row := r.ByUsernameStmt.QueryRow(username)
-
-	err := row.Scan(
-		&user.ID,
-		&user.Username,
-		&user.Email,
-		&user.Password,
-		&user.Name,
-		&user.Token,
-		&user.TokenExpires,
-		&user.Since,
-		&user.LastSeen,
-	)
-
-	if err != nil {
-		return model.User{}, err
-	}
-
-	return user, nil
+	return scanUser(row)
 }
 
 func (r *UserRepositoryImpl) ByToken(token string) (model.User, error) {
-	var user model.User
 	// Checking token expire date on repository just for simplicity as is strange this is going to change
 	// or cause problems
 	stmt, err := r.db.Prepare("SELECT * FROM ACCOUNT WHERE token = ? AND token_expire >= NOW();")
@@ -130,23 +94,7 @@ func (r *UserRepositoryImpl) ByToken(token string) (model.User, error) {
 	}
 
 	row := stmt.QueryRow(token)
-
-	err = row.Scan(
-		&user.ID,
-		&user.Username,
-		&user.Email,
-		&user.Password,
-		&user.Name,
-		&user.Token,
-		&user.TokenExpires,
-		&user.Since,
-		&user.LastSeen,
-	)
-	if err != nil {
-		return model.User{}, err
-	}
-
-	return user, nil
+	return scanUser(row)
 }
 
 func (r *UserRepositoryImpl) Update(id int64, user model.User) error {
@@ -223,4 +171,27 @@ func updateField(query *strings.Builder, args *[]any, field string, value any) {
 
 	query.WriteString(fmt.Sprintf(" %s = ?", field))
 	*args = append(*args, value)
+}
+
+func scanUser(row *sql.Row) (model.User, error) {
+	var user model.User
+	err := row.Scan(
+		&user.ID,
+		&user.Username,
+		&user.Email,
+		&user.Password,
+		&user.Name,
+		&user.Token,
+		&user.TokenExpires,
+		&user.LastSeen,
+		&user.Since,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return model.User{}, erro.ErrUserNotFound
+		}
+		return model.User{}, err
+	}
+
+	return user, nil
 }
