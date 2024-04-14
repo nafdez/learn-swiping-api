@@ -42,6 +42,7 @@ func main() {
 
 	authGroup := router.Group("/auth")
 	{
+		authGroup.POST("", userCtrl.Token)
 		authGroup.POST("register", userCtrl.Register)
 		authGroup.POST("login", userCtrl.Login)
 		authGroup.POST("logout", userCtrl.Logout)

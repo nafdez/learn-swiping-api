@@ -3,7 +3,6 @@ package controller
 import (
 	"errors"
 	"learn-swiping-api/erro"
-	"learn-swiping-api/model"
 	"learn-swiping-api/model/dto/user"
 	"learn-swiping-api/service"
 	"net/http"
@@ -14,6 +13,7 @@ import (
 type UserController interface {
 	Register(*gin.Context) // POST
 	Login(*gin.Context)    // POST
+	Token(*gin.Context)    // POST
 	Logout(*gin.Context)   // POST
 	Account(*gin.Context)  // POST
 	User(*gin.Context)     // GET
@@ -55,34 +55,48 @@ func (c *UserControllerImpl) Register(ctx *gin.Context) {
 
 func (c *UserControllerImpl) Login(ctx *gin.Context) {
 	var request user.LoginRequest
-	var tokenReq user.TokenRequest
 
 	err := ctx.ShouldBindJSON(&request)
-	tokenErr := ctx.ShouldBindJSON(&tokenReq)
-	if err != nil && tokenErr != nil {
+	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	var user model.User
-	if err == nil {
-		user, err = c.service.Login(request)
-	} else if tokenErr == nil {
-		user, err = c.service.Token(tokenReq)
-	} else {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
+	user, err := c.service.Login(request)
 	if err != nil {
 		if errors.Is(err, erro.ErrUserNotFound) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
-		} else if errors.Is(err, erro.ErrInvalidToken) {
-			ctx.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		} else if errors.Is(err, erro.ErrBadField) {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, user)
+}
+
+func (c *UserControllerImpl) Token(ctx *gin.Context) {
+	var request user.TokenRequest
+
+	err := ctx.ShouldBindJSON(&request)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	user, err := c.service.Token(request)
+	if err != nil {
+		if errors.Is(err, erro.ErrUserNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
 		} else if errors.Is(err, erro.ErrBadField) {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
+		} else if errors.Is(err, erro.ErrInvalidToken) {
+			ctx.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
