@@ -38,6 +38,14 @@ func (c *UserControllerImpl) Register(ctx *gin.Context) {
 
 	user, err := c.service.Register(request)
 	if err != nil {
+		if errors.Is(err, erro.ErrUserExists) {
+			ctx.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			return
+		}
+		if errors.Is(err, erro.ErrBadField) {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -71,6 +79,9 @@ func (c *UserControllerImpl) Login(ctx *gin.Context) {
 			return
 		} else if errors.Is(err, erro.ErrInvalidToken) {
 			ctx.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+			return
+		} else if errors.Is(err, erro.ErrBadField) {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
