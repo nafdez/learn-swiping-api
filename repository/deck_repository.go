@@ -14,9 +14,9 @@ import (
 
 type DeckRepository interface {
 	Create(model.Deck) (int64, error)
-	ById(id int64) (model.Deck, error)
-	ByOwner(id int64) ([]model.Deck, error)
-	ByUserId(id int64) ([]model.Deck, error) // ACC-DECK table
+	ById(id int64, showHidden bool) (model.Deck, error)
+	ByOwner(id int64, showHidden bool) ([]model.Deck, error)
+	ByUserId(id int64, showHidden bool) ([]model.Deck, error) // ACC-DECK table
 	Update(id int64, deck model.Deck) error
 	Delete(id int64) error
 }
@@ -46,17 +46,20 @@ func (repo *DeckRepositoryImpl) InitStatements() error {
 		return err
 	}
 
-	repo.ByIdStmt, err = repo.db.Prepare("SELECT * FROM DECK WHERE deck_id = ?")
+	// visible = 1 OR visible = ?
+	// To fetch only visible "?" needs to be 1
+	// To fetch also hidden "?" needs to be 0
+	repo.ByIdStmt, err = repo.db.Prepare("SELECT * FROM DECK WHERE deck_id = ? AND (visible = 1 OR visible = ?)")
 	if err != nil {
 		return err
 	}
 
-	repo.ByOwnerStmt, err = repo.db.Prepare("SELECT * FROM DECK WHERE acc_id = ?")
+	repo.ByOwnerStmt, err = repo.db.Prepare("SELECT * FROM DECK WHERE acc_id = ? AND (visible = 1 OR visible = ?)")
 	if err != nil {
 		return err
 	}
 
-	repo.ByUserIdStmt, err = repo.db.Prepare("SELECT d.* FROM DECK as d, ACC_DECK as ad WHERE ad.acc_id = ? AND d.deck_id = ad.deck_id")
+	repo.ByUserIdStmt, err = repo.db.Prepare("SELECT d.* FROM DECK as d, ACC_DECK as ad WHERE ad.acc_id = ? AND d.deck_id = ad.deck_id AND visible = ? AND (visible = 1 OR visible = ?)")
 	if err != nil {
 		return err
 	}
@@ -80,77 +83,28 @@ func (r *DeckRepositoryImpl) Create(deck model.Deck) (int64, error) {
 	return result.LastInsertId()
 }
 
-func (r *DeckRepositoryImpl) ById(id int64) (model.Deck, error) {
-	var deck model.Deck
-	row := r.ByIdStmt.QueryRow(id)
-
-	err := row.Scan(
-		&deck.ID,
-		&deck.Owner,
-		&deck.Title,
-		&deck.Description,
-		&deck.UpdatedAt,
-		&deck.CreatedAt,
-	)
-	if err != nil {
-		return model.Deck{}, err
-	}
-
-	return deck, nil
+func (r *DeckRepositoryImpl) ById(id int64, showHidden bool) (model.Deck, error) {
+	row := r.ByIdStmt.QueryRow(id, !showHidden)
+	return scanDeck(row)
 }
 
-func (r *DeckRepositoryImpl) ByOwner(id int64) ([]model.Deck, error) {
-	var decks []model.Deck
-	rows, err := r.ByOwnerStmt.Query(id)
+func (r *DeckRepositoryImpl) ByOwner(id int64, showHidden bool) ([]model.Deck, error) {
+	rows, err := r.ByOwnerStmt.Query(id, !showHidden)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-
-	var deck model.Deck
-	for rows.Next() {
-		err := rows.Scan(
-			&deck.ID,
-			&deck.Owner,
-			&deck.Title,
-			&deck.Description,
-			&deck.UpdatedAt,
-			&deck.CreatedAt,
-		)
-		if err != nil {
-			return decks, err
-		}
-		decks = append(decks, deck)
-	}
-
-	return decks, nil
+	//TODO:
+	return scanDecks(rows)
 }
 
-func (r *DeckRepositoryImpl) ByUserId(id int64) ([]model.Deck, error) {
-	var decks []model.Deck
-	rows, err := r.ByUserIdStmt.Query(id)
+func (r *DeckRepositoryImpl) ByUserId(id int64, showHidden bool) ([]model.Deck, error) {
+	rows, err := r.ByUserIdStmt.Query(id, !showHidden)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-
-	var deck model.Deck
-	for rows.Next() {
-		err := rows.Scan(
-			&deck.ID,
-			&deck.Owner,
-			&deck.Title,
-			&deck.Description,
-			&deck.UpdatedAt,
-			&deck.CreatedAt,
-		)
-		if err != nil {
-			return decks, err
-		}
-		decks = append(decks, deck)
-	}
-
-	return decks, nil
+	return scanDecks(rows)
 }
 
 func (r *DeckRepositoryImpl) Update(id int64, deck model.Deck) error {
@@ -161,6 +115,7 @@ func (r *DeckRepositoryImpl) Update(id int64, deck model.Deck) error {
 	updateDeckField(&query, &args, "title", deck.Title)
 	updateDeckField(&query, &args, "description", deck.Description)
 	updateDeckField(&query, &args, "updated_at", deck.UpdatedAt)
+	updateDeckField(&query, &args, "visible", deck.Visible)
 
 	args = append(args, id)
 	query.WriteString(" WHERE deck_id = ?")
@@ -221,4 +176,49 @@ func updateDeckField(query *strings.Builder, args *[]any, field string, value an
 
 	query.WriteString(fmt.Sprintf(" %s = ?", field))
 	*args = append(*args, value)
+}
+
+func scanDeck(row *sql.Row) (model.Deck, error) {
+	var deck model.Deck
+	err := row.Scan(
+		&deck.ID,
+		&deck.Owner,
+		&deck.Title,
+		&deck.Description,
+		&deck.UpdatedAt,
+		&deck.CreatedAt,
+		&deck.Visible,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return model.Deck{}, erro.ErrDeckNotFound
+		}
+		return model.Deck{}, err
+	}
+
+	return deck, nil
+}
+
+func scanDecks(rows *sql.Rows) ([]model.Deck, error) {
+	var decks []model.Deck
+	var deck model.Deck
+	for rows.Next() {
+		err := rows.Scan(
+			&deck.ID,
+			&deck.Owner,
+			&deck.Title,
+			&deck.Description,
+			&deck.UpdatedAt,
+			&deck.CreatedAt,
+			&deck.Visible,
+		)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return decks, erro.ErrDeckNotFound
+			}
+			return decks, err
+		}
+		decks = append(decks, deck)
+	}
+	return decks, nil
 }
