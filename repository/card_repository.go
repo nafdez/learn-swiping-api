@@ -18,7 +18,7 @@ type CardRepository interface {
 	Update(id int64, card model.Card) error
 	Delete(id int64) error
 	CreateWrong(wrong model.WrongAnswer) (int64, error)
-	WrongById(id int64) ([]model.Card, error)
+	WrongById(id int64) ([]model.WrongAnswer, error)
 	UpdateWrong(id int64, wrong model.WrongAnswer) error
 	DeleteWrong(id int64) error
 }
@@ -96,7 +96,9 @@ func (r *CardRepositoryImpl) Create(card model.Card, wrong []model.WrongAnswer) 
 		return 0, err
 	}
 
-	wrongStmt, err := tx.Prepare("SELECT * FROM WRONG_ANSWER WHERE card_id = ?")
+	// Why I wrote a select here???? How I was expecting this to magically work??
+	// wrongStmt, err := tx.Prepare("SELECT * FROM WRONG_ANSWER WHERE card_id = ?")
+	wrongStmt, err := tx.Prepare("INSERT INTO WRONG_ANSWER (card_id, answer) VALUES (?,?)")
 	if err != nil {
 		return 0, err
 	}
@@ -104,6 +106,7 @@ func (r *CardRepositoryImpl) Create(card model.Card, wrong []model.WrongAnswer) 
 	defer cardStmt.Close()
 	defer wrongStmt.Close()
 
+	// Insert Card
 	result, err := cardStmt.Exec(card.DeckID, card.Study, card.Question, card.Answer)
 	if err != nil {
 		tx.Rollback()
@@ -119,10 +122,14 @@ func (r *CardRepositoryImpl) Create(card model.Card, wrong []model.WrongAnswer) 
 		return 0, err
 	}
 
+	// Insert wrong answers
 	for i := 0; i < len(wrong); i++ {
 		_, err := wrongStmt.Exec(id, wrong[i].Answer)
 		if err != nil {
 			tx.Rollback()
+			if err.(*mysql.MySQLError).Number == 1452 {
+				return 0, erro.ErrCardNotFound
+			}
 			return 0, err
 		}
 	}
@@ -148,6 +155,9 @@ func (r *CardRepositoryImpl) ById(id int64) (model.Card, error) {
 		&card.Answer,
 	)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return model.Card{}, erro.ErrCardNotFound
+		}
 		return model.Card{}, err
 	}
 
@@ -172,6 +182,9 @@ func (r *CardRepositoryImpl) ByDeckId(id int64) ([]model.Card, error) {
 			&card.Answer,
 		)
 		if err != nil {
+			if err == sql.ErrNoRows {
+				return nil, erro.ErrCardNotFound
+			}
 			return cards, err
 		}
 		cards = append(cards, card)
@@ -255,6 +268,9 @@ func (r *CardRepositoryImpl) WrongById(id int64) ([]model.WrongAnswer, error) {
 			&wrongAnswer.Answer,
 		)
 		if err != nil {
+			if err == sql.ErrNoRows {
+				return nil, erro.ErrWrongNotFound
+			}
 			return wrong, err
 		}
 		wrong = append(wrong, wrongAnswer)
