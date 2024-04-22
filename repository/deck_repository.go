@@ -20,15 +20,17 @@ type DeckRepository interface {
 	ByUserId(deck.ReadRequest) ([]model.Deck, error) // ACC-DECK table
 	Update(id int64, deck model.Deck) error
 	Delete(id int64) error
+	CheckOwnership(deckID int64, token string) bool
 }
 
 type DeckRepositoryImpl struct {
-	db           *sql.DB
-	CreateStmt   *sql.Stmt
-	ByIdStmt     *sql.Stmt
-	ByOwnerStmt  *sql.Stmt
-	ByUserIdStmt *sql.Stmt
-	DeleteStmt   *sql.Stmt
+	db             *sql.DB
+	CreateStmt     *sql.Stmt
+	ByIdStmt       *sql.Stmt
+	ByOwnerStmt    *sql.Stmt
+	ByUserIdStmt   *sql.Stmt
+	DeleteStmt     *sql.Stmt
+	CheckOwnerStmt *sql.Stmt
 }
 
 func NewDeckRepository(db *sql.DB) *DeckRepositoryImpl {
@@ -79,6 +81,14 @@ func (repo *DeckRepositoryImpl) InitStatements() error {
 		return err
 	}
 
+	repo.CheckOwnerStmt, err = repo.db.Prepare(`SELECT d.*
+													FROM DECK d
+													LEFT JOIN ACCOUNT a ON d.acc_id = a.acc_id
+													WHERE d.deck_id = ? AND a.token = ?`)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -125,7 +135,7 @@ func (r *DeckRepositoryImpl) Update(id int64, deck model.Deck) error {
 	updateDeckField(&query, &args, "title", deck.Title)
 	updateDeckField(&query, &args, "description", deck.Description)
 	updateDeckField(&query, &args, "updated_at", deck.UpdatedAt)
-	updateDeckField(&query, &args, "visible", &deck.Visible)
+	updateDeckField(&query, &args, "visible", deck.Visible)
 
 	args = append(args, id)
 	query.WriteString(" WHERE deck_id = ?")
@@ -170,13 +180,20 @@ func (r *DeckRepositoryImpl) Delete(id int64) error {
 	return nil
 }
 
+// This function should be in service
+func (r *DeckRepositoryImpl) CheckOwnership(deckID int64, token string) bool {
+	row := r.CheckOwnerStmt.QueryRow(deckID, token)
+	_, err := scanDeck(row)
+	return err == nil
+}
+
 func updateDeckField(query *strings.Builder, args *[]any, field string, value any) {
 	// Just checking if it's a date and it isn't empty
 	if _, ok := value.(time.Time); ok && value.(time.Time).IsZero() {
 		return
 	}
 
-	if value == "" {
+	if value == "" || value == nil {
 		return
 	}
 

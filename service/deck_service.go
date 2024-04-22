@@ -62,13 +62,20 @@ func (s *DeckServiceImpl) Update(request deck.UpdateRequest) error {
 	deck := model.Deck{
 		Title:       request.Title,
 		Description: request.Description,
-		// Visible:     request.Visible,
-		UpdatedAt: time.Now(),
+		Visible:     request.Visible,
+		UpdatedAt:   time.Now(),
 	}
 
-	return s.repository.Update(request.DeckID, deck)
+	if s.repository.CheckOwnership(request.DeckID, request.Token) {
+		return s.repository.Update(request.DeckID, deck)
+	}
+
+	return erro.ErrInvalidToken
 }
 
 func (s *DeckServiceImpl) Delete(request deck.DeleteRequest) error {
-	return s.Delete(request)
+	if s.repository.CheckOwnership(request.DeckID, request.Token) {
+		return s.repository.Delete(request.DeckID)
+	}
+	return erro.ErrInvalidToken
 }
