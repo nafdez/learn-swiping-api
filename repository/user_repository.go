@@ -19,14 +19,18 @@ type UserRepository interface {
 	ByToken(token string) (model.User, error)
 	Update(id int64, user model.User) error
 	Delete(id int64) error
+	AddDeckSuscription(id int64, deckId int64) error
+	RemoveDeckSuscription(id int64, deckId int64) error
 }
 
 type UserRepositoryImpl struct {
-	db             *sql.DB
-	CreateStmt     *sql.Stmt
-	ByIdStmt       *sql.Stmt
-	ByUsernameStmt *sql.Stmt
-	DeleteStmt     *sql.Stmt
+	db                        *sql.DB
+	CreateStmt                *sql.Stmt
+	ByIdStmt                  *sql.Stmt
+	ByUsernameStmt            *sql.Stmt
+	DeleteStmt                *sql.Stmt
+	AddDeckSuscriptionStmt    *sql.Stmt
+	RemoveDeckSuscriptionStmt *sql.Stmt
 }
 
 func NewUserRepository(db *sql.DB) *UserRepositoryImpl {
@@ -56,6 +60,16 @@ func (r *UserRepositoryImpl) InitStatements() error {
 	}
 
 	r.DeleteStmt, err = r.db.Prepare("DELETE FROM ACCOUNT WHERE acc_id = ?")
+	if err != nil {
+		return err
+	}
+
+	r.AddDeckSuscriptionStmt, err = r.db.Prepare("INSERT INTO ACC_DECK(acc_id, deck_id) VALUES (?, ?)")
+	if err != nil {
+		return err
+	}
+
+	r.RemoveDeckSuscriptionStmt, err = r.db.Prepare("DELETE FROM ACC_DECK WHERE acc_id = ? AND deck_id = ?")
 	if err != nil {
 		return err
 	}
@@ -152,6 +166,28 @@ func (r *UserRepositoryImpl) Delete(id int64) error {
 		return erro.ErrUserNotFound
 	}
 
+	return nil
+}
+
+func (r *UserRepositoryImpl) AddDeckSuscription(id int64, deckId int64) error {
+	_, err := r.AddDeckSuscriptionStmt.Exec(id, deckId)
+	if err != nil {
+		if err.(*mysql.MySQLError).Number == 1062 {
+			return erro.ErrAlreadySuscribed
+		}
+		return err
+	}
+	return nil
+}
+
+func (r *UserRepositoryImpl) RemoveDeckSuscription(id int64, deckId int64) error {
+	_, err := r.RemoveDeckSuscriptionStmt.Exec(id, deckId)
+	if err != nil {
+		if err.(*mysql.MySQLError).Number == 1062 {
+			return erro.ErrNotSuscribed
+		}
+		return err
+	}
 	return nil
 }
 
