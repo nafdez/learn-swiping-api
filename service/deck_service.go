@@ -10,9 +10,9 @@ import (
 
 type DeckService interface {
 	Create(deck.CreateRequest) (int64, error)
-	Read(deck.ReadRequest) (model.Deck, error)
-	ReadFromUser(deck.ReadRequest) ([]model.Deck, error)
-	ReadUserSuscriptions(deck.ReadRequest) ([]model.Deck, error) // Should be only accepting ID but for the sake of consistency
+	Deck(deck.ReadOneRequest) (model.Deck, error)
+	OwnedDecks(deck.ReadOwnedRequest) ([]model.Deck, error)
+	Suscriptions(deck.ReadRequest) ([]model.Deck, error) // Should be only accepting ID but for the sake of consistency
 	Update(deck.UpdateRequest) error
 	Delete(deck.DeleteRequest) error
 }
@@ -26,9 +26,9 @@ func NewDeckService(repository repository.DeckRepository) DeckService {
 }
 
 func (s *DeckServiceImpl) Create(request deck.CreateRequest) (int64, error) {
-	if request.Owner == 0 || request.Title == "" {
-		return 0, erro.ErrBadField
-	}
+	// if request.Owner == 0 || request.Title == "" {
+	// 	return 0, erro.ErrBadField
+	// }
 
 	deck := model.Deck{
 		Owner:       request.Owner,
@@ -41,16 +41,16 @@ func (s *DeckServiceImpl) Create(request deck.CreateRequest) (int64, error) {
 }
 
 // Wondering what kind of mistakes I have made in my life to be doing this stuff
-func (s *DeckServiceImpl) Read(request deck.ReadRequest) (model.Deck, error) {
-	return s.repository.ById(request)
+func (s *DeckServiceImpl) Deck(request deck.ReadOneRequest) (model.Deck, error) {
+	return s.repository.ById(request.Id, request.Token)
 }
 
-func (s *DeckServiceImpl) ReadFromUser(request deck.ReadRequest) ([]model.Deck, error) {
-	return s.repository.ByOwner(request)
+func (s *DeckServiceImpl) OwnedDecks(request deck.ReadOwnedRequest) ([]model.Deck, error) {
+	return s.repository.ByOwner(request.Id, request.Username, request.Token)
 }
 
-func (s *DeckServiceImpl) ReadUserSuscriptions(request deck.ReadRequest) ([]model.Deck, error) {
-	return s.repository.ByUserId(request)
+func (s *DeckServiceImpl) Suscriptions(request deck.ReadRequest) ([]model.Deck, error) {
+	return s.repository.ByUserId(request.Id, request.Token)
 }
 
 func (s *DeckServiceImpl) Update(request deck.UpdateRequest) error {
