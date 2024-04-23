@@ -43,7 +43,7 @@ func NewDeckRepository(db *sql.DB) *DeckRepositoryImpl {
 
 func (repo *DeckRepositoryImpl) InitStatements() error {
 	var err error
-	repo.CreateStmt, err = repo.db.Prepare("INSERT INTO DECK (owner, title, description) VALUES (?,?,?)")
+	repo.CreateStmt, err = repo.db.Prepare("INSERT INTO DECK (owner, title, description, visible) VALUES (?,?,?,?)")
 	if err != nil {
 		return err
 	}
@@ -97,7 +97,7 @@ func (repo *DeckRepositoryImpl) InitStatements() error {
 }
 
 func (r *DeckRepositoryImpl) Create(deck model.Deck) (int64, error) {
-	result, err := r.CreateStmt.Exec(deck.Owner, deck.Title, deck.Description)
+	result, err := r.CreateStmt.Exec(deck.Owner, deck.Title, deck.Description, *deck.Visible)
 	if err != nil {
 		if err.(*mysql.MySQLError).Number == 1452 {
 			return 0, erro.ErrUserNotFound
