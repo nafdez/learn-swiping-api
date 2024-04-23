@@ -80,7 +80,7 @@ func (c *DeckControllerImpl) Deck(ctx *gin.Context) {
 func (c *DeckControllerImpl) OwnedDecks(ctx *gin.Context) {
 	var request deck.ReadOwnedRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": erro.ErrBadField})
 		return
 	}
 
@@ -104,7 +104,7 @@ func (c *DeckControllerImpl) OwnedDecks(ctx *gin.Context) {
 func (c *DeckControllerImpl) Suscriptions(ctx *gin.Context) {
 	var request deck.ReadRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": erro.ErrBadField})
 		return
 	}
 
@@ -126,7 +126,46 @@ func (c *DeckControllerImpl) Suscriptions(ctx *gin.Context) {
 }
 
 func (c *DeckControllerImpl) Update(ctx *gin.Context) {
+	var request deck.UpdateRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField})
+		return
+	}
+
+	if err := c.service.Update(request); err != nil {
+		if errors.Is(err, erro.ErrBadField) || errors.Is(err, erro.ErrInvalidToken) {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		if errors.Is(err, erro.ErrDeckNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{})
 }
 
 func (c *DeckControllerImpl) Delete(ctx *gin.Context) {
+	var request deck.DeleteRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField})
+		return
+	}
+
+	if err := c.service.Delete(request); err != nil {
+		if errors.Is(err, erro.ErrInvalidToken) {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		if errors.Is(err, erro.ErrDeckNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 }
