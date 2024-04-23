@@ -12,12 +12,14 @@ import (
 )
 
 type DeckController interface {
-	Create(*gin.Context)       // POST
-	Deck(*gin.Context)         // GET
-	OwnedDecks(*gin.Context)   // POST (to accept token)
-	Suscriptions(*gin.Context) // POST (from other users)
-	Update(*gin.Context)       // PUT
-	Delete(*gin.Context)       // DELETE
+	Create(*gin.Context)                 // POST
+	Deck(*gin.Context)                   // GET
+	OwnedDecks(*gin.Context)             // POST (to accept token)
+	Suscriptions(*gin.Context)           // POST (from other users)
+	Update(*gin.Context)                 // PUT
+	Delete(*gin.Context)                 // DELETE
+	AddDeckSubscription(*gin.Context)    // POST
+	RemoveDeckSubscription(*gin.Context) // DELETE
 }
 
 type DeckControllerImpl struct {
@@ -168,4 +170,42 @@ func (c *DeckControllerImpl) Delete(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+}
+
+func (c *DeckControllerImpl) AddDeckSubscription(ctx *gin.Context) {
+	var request deck.DeckSuscriptionRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField})
+		return
+	}
+
+	if err := c.service.AddDeckSubscription(request); err != nil {
+		if errors.Is(err, erro.ErrAlreadySuscribed) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{})
+}
+
+func (c *DeckControllerImpl) RemoveDeckSubscription(ctx *gin.Context) {
+	var request deck.DeckSuscriptionRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField})
+		return
+	}
+
+	if err := c.service.RemoveDeckSubscription(request); err != nil {
+		if errors.Is(err, erro.ErrNotSuscribed) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{})
 }

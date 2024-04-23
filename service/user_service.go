@@ -23,8 +23,6 @@ type UserService interface {
 	User(user.PublicRequest) (user.Public, error)
 	Update(user.UpdateRequest) error
 	Delete(user.TokenRequest) error
-	AddDeckSuscription(user.DeckSuscriptionRequest) error
-	RemoveDeckSuscription(user.DeckSuscriptionRequest) error
 	updateToken(old string) (string, error)
 	generateToken() (string, error)
 	hashPassword(password string) (string, error)
@@ -204,20 +202,6 @@ func (s *UserServiceImpl) Delete(request user.TokenRequest) error {
 	}
 
 	return s.repository.Delete(user.ID)
-}
-
-func (s *UserServiceImpl) AddDeckSuscription(request user.DeckSuscriptionRequest) error {
-	if request.UserID == 0 || request.DeckID == 0 {
-		return erro.ErrCardExists
-	}
-	return s.repository.AddDeckSuscription(request.UserID, request.DeckID)
-}
-
-func (s *UserServiceImpl) RemoveDeckSuscription(request user.DeckSuscriptionRequest) error {
-	if request.UserID == 0 || request.DeckID == 0 {
-		return erro.ErrCardExists
-	}
-	return s.repository.RemoveDeckSuscription(request.UserID, request.DeckID)
 }
 
 func (s *UserServiceImpl) updateToken(old string) (string, error) {

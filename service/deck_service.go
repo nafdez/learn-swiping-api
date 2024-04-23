@@ -15,6 +15,8 @@ type DeckService interface {
 	Suscriptions(deck.ReadRequest) ([]model.Deck, error) // Should be only accepting ID but for the sake of consistency
 	Update(deck.UpdateRequest) error
 	Delete(deck.DeleteRequest) error
+	AddDeckSubscription(deck.DeckSuscriptionRequest) error
+	RemoveDeckSubscription(deck.DeckSuscriptionRequest) error
 }
 
 type DeckServiceImpl struct {
@@ -90,4 +92,12 @@ func (s *DeckServiceImpl) Delete(request deck.DeleteRequest) error {
 		return s.repository.Delete(request.DeckID)
 	}
 	return erro.ErrInvalidToken
+}
+
+func (s *DeckServiceImpl) AddDeckSubscription(request deck.DeckSuscriptionRequest) error {
+	return s.repository.AddDeckSubscription(request.UserID, request.DeckID)
+}
+
+func (s *DeckServiceImpl) RemoveDeckSubscription(request deck.DeckSuscriptionRequest) error {
+	return s.repository.RemoveDeckSubscription(request.UserID, request.DeckID)
 }

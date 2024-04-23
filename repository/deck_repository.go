@@ -19,17 +19,22 @@ type DeckRepository interface {
 	ByUserId(id int64, token string) ([]model.Deck, error) // ACC-DECK table
 	Update(id int64, deck model.Deck) error
 	Delete(id int64) error
+	// TODO: Only insert sub if token matches with the account's token of the id
+	AddDeckSubscription(id int64, deckId int64) error
+	RemoveDeckSubscription(id int64, deckId int64) error
 	CheckOwnership(deckID int64, token string) bool
 }
 
 type DeckRepositoryImpl struct {
-	db             *sql.DB
-	CreateStmt     *sql.Stmt
-	ByIdStmt       *sql.Stmt
-	ByOwnerStmt    *sql.Stmt
-	ByUserIdStmt   *sql.Stmt
-	DeleteStmt     *sql.Stmt
-	CheckOwnerStmt *sql.Stmt
+	db                         *sql.DB
+	CreateStmt                 *sql.Stmt
+	ByIdStmt                   *sql.Stmt
+	ByOwnerStmt                *sql.Stmt
+	ByUserIdStmt               *sql.Stmt
+	DeleteStmt                 *sql.Stmt
+	AddDeckSubscriptionStmt    *sql.Stmt
+	RemoveDeckSubscriptionStmt *sql.Stmt
+	CheckOwnerStmt             *sql.Stmt
 }
 
 func NewDeckRepository(db *sql.DB) *DeckRepositoryImpl {
@@ -89,6 +94,16 @@ func (repo *DeckRepositoryImpl) InitStatements() error {
 													FROM DECK d
 													LEFT JOIN ACCOUNT a ON d.acc_id = a.acc_id
 													WHERE d.deck_id = ? AND a.token = ?`)
+	if err != nil {
+		return err
+	}
+
+	repo.AddDeckSubscriptionStmt, err = repo.db.Prepare("INSERT INTO ACC_DECK(acc_id, deck_id) VALUES (?, ?)")
+	if err != nil {
+		return err
+	}
+
+	repo.RemoveDeckSubscriptionStmt, err = repo.db.Prepare("DELETE FROM ACC_DECK WHERE acc_id = ? AND deck_id = ?")
 	if err != nil {
 		return err
 	}
@@ -178,6 +193,35 @@ func (r *DeckRepositoryImpl) Delete(id int64) error {
 
 	if affected == 0 {
 		return erro.ErrDeckNotFound
+	}
+
+	return nil
+}
+
+func (r *DeckRepositoryImpl) AddDeckSubscription(id int64, deckId int64) error {
+	_, err := r.AddDeckSubscriptionStmt.Exec(id, deckId)
+	if err != nil {
+		if err.(*mysql.MySQLError).Number == 1062 {
+			return erro.ErrAlreadySuscribed
+		}
+		return err
+	}
+	return nil
+}
+
+func (r *DeckRepositoryImpl) RemoveDeckSubscription(id int64, deckId int64) error {
+	result, err := r.RemoveDeckSubscriptionStmt.Exec(id, deckId)
+	if err != nil {
+		return err
+	}
+
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if affected == 0 {
+		return erro.ErrNotSuscribed
 	}
 
 	return nil
