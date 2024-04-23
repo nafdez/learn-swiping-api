@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"learn-swiping-api/erro"
 	"learn-swiping-api/model"
-	"learn-swiping-api/model/dto/deck"
 	"log"
 	"strings"
 	"time"
@@ -15,9 +14,9 @@ import (
 
 type DeckRepository interface {
 	Create(model.Deck) (int64, error)
-	ById(deck.ReadRequest) (model.Deck, error)
-	ByOwner(deck.ReadRequest) ([]model.Deck, error)
-	ByUserId(deck.ReadRequest) ([]model.Deck, error) // ACC-DECK table
+	ById(id int64, token string) (model.Deck, error)
+	ByOwner(id int64, username string, token string) ([]model.Deck, error)
+	ByUserId(id int64, token string) ([]model.Deck, error) // ACC-DECK table
 	Update(id int64, deck model.Deck) error
 	Delete(id int64) error
 	CheckOwnership(deckID int64, token string) bool
@@ -64,7 +63,12 @@ func (repo *DeckRepositoryImpl) InitStatements() error {
 
 	// repo.ByOwnerStmt, err = repo.db.Prepare("SELECT * FROM DECK WHERE acc_id = ? AND (visible = 1 OR visible = ?)")
 	// Two birds in one shot. Only shows hidden when token of the account matches the deck's owner token
-	repo.ByOwnerStmt, err = repo.db.Prepare("SELECT * FROM DECK d, ACCOUNT acc WHERE d.acc_id = ? AND (d.visible = 1 OR (acc.token = ?))")
+	// repo.ByOwnerStmt, err = repo.db.Prepare("SELECT d.* FROM DECK d, ACCOUNT acc WHERE (d.acc_id = ? AND 1=1) AND (d.visible = 1 OR (acc.token = ?))")
+	repo.ByOwnerStmt, err = repo.db.Prepare(`SELECT *
+												FROM DECK d
+												LEFT JOIN ACCOUNT a ON d.acc_id = a.acc_id 
+												WHERE (a.acc_id = ? OR a.username = ?) 
+												AND (d.visible = 1 OR a.token = ?`)
 	if err != nil {
 		return err
 	}
@@ -103,23 +107,22 @@ func (r *DeckRepositoryImpl) Create(deck model.Deck) (int64, error) {
 	return result.LastInsertId()
 }
 
-func (r *DeckRepositoryImpl) ById(request deck.ReadRequest) (model.Deck, error) {
-	row := r.ByIdStmt.QueryRow(request.Id, request.Token)
+func (r *DeckRepositoryImpl) ById(id int64, token string) (model.Deck, error) {
+	row := r.ByIdStmt.QueryRow(id, token)
 	return scanDeck(row)
 }
 
-func (r *DeckRepositoryImpl) ByOwner(request deck.ReadRequest) ([]model.Deck, error) {
-	rows, err := r.ByOwnerStmt.Query(request.Id, request.Token)
+func (r *DeckRepositoryImpl) ByOwner(id int64, username string, token string) ([]model.Deck, error) {
+	rows, err := r.ByOwnerStmt.Query(id, username, token)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	//TODO:
 	return scanDecks(rows)
 }
 
-func (r *DeckRepositoryImpl) ByUserId(request deck.ReadRequest) ([]model.Deck, error) {
-	rows, err := r.ByUserIdStmt.Query(request.Id, request.Token)
+func (r *DeckRepositoryImpl) ByUserId(id int64, token string) ([]model.Deck, error) {
+	rows, err := r.ByUserIdStmt.Query(id, token)
 	if err != nil {
 		return nil, err
 	}
