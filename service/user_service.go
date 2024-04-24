@@ -9,6 +9,7 @@ import (
 	"learn-swiping-api/model"
 	"learn-swiping-api/model/dto/user"
 	"learn-swiping-api/repository"
+	"net/mail"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -38,11 +39,9 @@ func NewUserService(repository repository.UserRepository) UserService {
 }
 
 func (s *UserServiceImpl) Register(request user.RegisterRequest) (model.User, error) {
-	if request.Username == "" || request.Password == "" || request.Email == "" || request.Name == "" {
-		return model.User{}, erro.ErrBadField
+	if _, err := mail.ParseAddress(request.Email); err != nil {
+		return model.User{}, erro.ErrInvalidEmail
 	}
-
-	// TODO: check email is valid
 
 	hash, err := s.hashPassword(request.Password)
 	if err != nil {
@@ -72,10 +71,6 @@ func (s *UserServiceImpl) Register(request user.RegisterRequest) (model.User, er
 }
 
 func (s *UserServiceImpl) Login(request user.LoginRequest) (model.User, error) {
-	if request.Username == "" || request.Password == "" {
-		return model.User{}, erro.ErrBadField
-	}
-
 	user, err := s.repository.ByUsername(request.Username)
 	if err != nil {
 		return model.User{}, err
@@ -96,10 +91,6 @@ func (s *UserServiceImpl) Login(request user.LoginRequest) (model.User, error) {
 
 // Same as login function but using a token instead of user and password
 func (s *UserServiceImpl) Token(request user.TokenRequest) (model.User, error) {
-	if request.Token == "" {
-		return model.User{}, erro.ErrInvalidToken
-	}
-
 	user, err := s.repository.ByToken(request.Token)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -119,20 +110,12 @@ func (s *UserServiceImpl) Token(request user.TokenRequest) (model.User, error) {
 }
 
 func (s *UserServiceImpl) Logout(request user.TokenRequest) error {
-	if request.Token == "" {
-		return erro.ErrInvalidToken
-	}
-
 	// Updating token and not returning to user to invalidate the previous token
 	_, err := s.updateToken(request.Token)
 	return err
 }
 
 func (s *UserServiceImpl) Account(request user.TokenRequest) (model.User, error) {
-	if request.Token == "" {
-		return model.User{}, erro.ErrInvalidToken
-	}
-
 	return s.repository.ByToken(request.Token)
 }
 
@@ -160,16 +143,14 @@ func (s *UserServiceImpl) User(request user.PublicRequest) (user.Public, error) 
 }
 
 func (s *UserServiceImpl) Update(request user.UpdateRequest) error {
-	if request.Token == "" {
-		return erro.ErrInvalidToken
-	}
-
 	// If all fields are empty, throw an error
 	if request.Username == "" && request.Password == "" && request.Email == "" && request.Name == "" {
 		return erro.ErrBadField
 	}
 
-	// TODO: if email isn't empty check it is valid
+	if _, err := mail.ParseAddress(request.Email); err != nil {
+		return erro.ErrInvalidEmail
+	}
 
 	user, err := s.repository.ByToken(request.Token)
 	if err != nil {
@@ -193,9 +174,6 @@ func (s *UserServiceImpl) Update(request user.UpdateRequest) error {
 }
 
 func (s *UserServiceImpl) Delete(request user.TokenRequest) error {
-	if request.Token == "" {
-		return erro.ErrInvalidToken
-	}
 	user, err := s.repository.ByToken(request.Token)
 	if err != nil {
 		return err
