@@ -1,7 +1,7 @@
 package card
 
 type UpdateRequest struct {
-	ID       int64                `json:"card_id"`
+	ID       int64                `json:"card_id" binding:"required"`
 	Study    string               `json:"study"`
 	Question string               `json:"question"`
 	Answer   string               `json:"answer"`
@@ -9,6 +9,6 @@ type UpdateRequest struct {
 }
 
 type updateWrongRequest struct {
-	WrongID int64  `json:"wrong_id"`
-	Answer  string `json:"answer"`
+	WrongID int64  `json:"wrong_id" binding:"required"`
+	Answer  string `json:"answer" binding:"required"` // Nothing to update if id is provided but not the new answer
 }

@@ -11,8 +11,8 @@ import (
 
 type CardService interface {
 	Create(card.CreateRequest) (int64, error)
-	AllFromDeck(deckID int64) ([]model.Card, error)
-	ReadOne(id int64) (model.Card, error)
+	Card(cardID int64) (model.Card, error)
+	Cards(deckID int64) ([]model.Card, error)
 	Update(card.UpdateRequest) error
 	Delete(id int64) error
 }
@@ -26,7 +26,7 @@ func NewCardService(repository repository.CardRepository) CardService {
 }
 
 func (s *CardServiceImpl) Create(request card.CreateRequest) (int64, error) {
-	if request.DeckID == 0 || request.Study == "" || request.Question == "" || request.Answer == "" || len(request.Wrong) != 3 {
+	if len(request.Wrong) != 3 { // All cards should have four answers, one OK three bad
 		return 0, erro.ErrBadField
 	}
 
@@ -35,35 +35,19 @@ func (s *CardServiceImpl) Create(request card.CreateRequest) (int64, error) {
 		Study:    request.Study,
 		Question: request.Question,
 		Answer:   request.Answer,
+		Wrong:    request.Wrong,
 	}
 
-	return s.repository.Create(card, request.Wrong)
+	return s.repository.Create(card)
 }
 
-func (s *CardServiceImpl) AllFromDeck(deckID int64) ([]model.Card, error) {
-	if deckID == 0 {
-		return nil, erro.ErrCardNotFound
-	}
-
-	// Only getting all results from the query directly
-	// without adding the wrong answers to the return
-	// so we don't retrieve lots of rows at once.
-	// Wrong answers should only be needed when viewing one
-	// card at most
-	return s.repository.ByDeckId(deckID)
-}
-
-func (s *CardServiceImpl) ReadOne(id int64) (model.Card, error) {
-	if id == 0 {
-		return model.Card{}, erro.ErrCardNotFound
-	}
-
-	card, err := s.repository.ById(id)
+func (s *CardServiceImpl) Card(cardID int64) (model.Card, error) {
+	card, err := s.repository.ById(cardID)
 	if err != nil {
 		return model.Card{}, err
 	}
 
-	card.Wrong, err = s.repository.WrongById(id)
+	card.Wrong, err = s.repository.WrongByCardId(cardID)
 	if err != nil {
 		return model.Card{}, err
 	}
@@ -71,11 +55,13 @@ func (s *CardServiceImpl) ReadOne(id int64) (model.Card, error) {
 	return card, nil
 }
 
-func (s *CardServiceImpl) Update(request card.UpdateRequest) error {
-	if request.ID == 0 {
-		return erro.ErrCardNotFound
-	}
+func (s *CardServiceImpl) Cards(deckID int64) ([]model.Card, error) {
+	// Wrong answers should only be needed when viewing one
+	// card at most
+	return s.repository.ByDeckId(deckID)
+}
 
+func (s *CardServiceImpl) Update(request card.UpdateRequest) error {
 	if request.Study != "" || request.Question != "" || request.Answer != "" {
 		card := model.Card{
 			Study:    request.Study,
@@ -110,8 +96,5 @@ func (s *CardServiceImpl) Update(request card.UpdateRequest) error {
 }
 
 func (s *CardServiceImpl) Delete(id int64) error {
-	if id != 0 {
-		return erro.ErrBadField
-	}
 	return s.repository.Delete(id)
 }

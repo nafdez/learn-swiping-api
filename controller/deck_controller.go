@@ -30,6 +30,8 @@ func NewDeckController(service service.DeckService) DeckController {
 	return &DeckControllerImpl{service: service}
 }
 
+// Creates a deck
+// Method: POST
 func (c *DeckControllerImpl) Create(ctx *gin.Context) {
 	var request deck.CreateRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {
@@ -49,6 +51,8 @@ func (c *DeckControllerImpl) Create(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, gin.H{})
 }
 
+// Retrieves a deck by it's id
+// Method: GET
 func (c *DeckControllerImpl) Deck(ctx *gin.Context) {
 	idParam := ctx.Param("id")
 
@@ -79,6 +83,8 @@ func (c *DeckControllerImpl) Deck(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, deck)
 }
 
+// Retrieves a list of decks a user has created
+// Method: POST
 func (c *DeckControllerImpl) OwnedDecks(ctx *gin.Context) {
 	var request deck.ReadOwnedRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {
@@ -103,6 +109,8 @@ func (c *DeckControllerImpl) OwnedDecks(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, decks)
 }
 
+// Retrieves a list of decks that a user has been subscribed for
+// Method: PPOST
 func (c *DeckControllerImpl) Suscriptions(ctx *gin.Context) {
 	var request deck.ReadRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {
@@ -127,6 +135,8 @@ func (c *DeckControllerImpl) Suscriptions(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, decks)
 }
 
+// Updates a deck
+// Method: PUT
 func (c *DeckControllerImpl) Update(ctx *gin.Context) {
 	var request deck.UpdateRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {
@@ -150,6 +160,8 @@ func (c *DeckControllerImpl) Update(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{})
 }
 
+// Deletes a deck
+// Method: DELETE
 func (c *DeckControllerImpl) Delete(ctx *gin.Context) {
 	var request deck.DeleteRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {
@@ -172,6 +184,8 @@ func (c *DeckControllerImpl) Delete(ctx *gin.Context) {
 	}
 }
 
+// Subscribes a user to a deck
+// Method: POST
 func (c *DeckControllerImpl) AddDeckSubscription(ctx *gin.Context) {
 	var request deck.DeckSuscriptionRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {
@@ -191,6 +205,8 @@ func (c *DeckControllerImpl) AddDeckSubscription(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{})
 }
 
+// Unsubscribes a deck from a user
+// Method: DELETE
 func (c *DeckControllerImpl) RemoveDeckSubscription(ctx *gin.Context) {
 	var request deck.DeckSuscriptionRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {

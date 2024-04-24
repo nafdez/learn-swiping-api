@@ -12,21 +12,19 @@ import (
 )
 
 type CardRepository interface {
-	Create(card model.Card, wrongs []model.WrongAnswer) (int64, error)
+	Create(model.Card) (int64, error)
 	ById(id int64) (model.Card, error)
 	ByDeckId(id int64) ([]model.Card, error)
 	Update(id int64, card model.Card) error
 	Delete(id int64) error
 	CreateWrong(wrong model.WrongAnswer) (int64, error)
-	WrongById(id int64) ([]model.WrongAnswer, error)
+	WrongByCardId(cardID int64) ([]model.WrongAnswer, error)
 	UpdateWrong(id int64, wrong model.WrongAnswer) error
 	DeleteWrong(id int64) error
 }
 
 type CardRepositoryImpl struct {
-	db *sql.DB
-	// CreateStmt      *sql.Stmt
-	// CreateWrongStmt *sql.Stmt
+	db              *sql.DB
 	ByIdStmt        *sql.Stmt
 	ByDeckIdStmt    *sql.Stmt
 	DeleteStmt      *sql.Stmt
@@ -46,11 +44,6 @@ func NewCardRepository(db *sql.DB) *CardRepositoryImpl {
 
 func (repo *CardRepositoryImpl) InitStatements() error {
 	var err error
-	// repo.CreateStmt, err = repo.db.Prepare("INSERT INTO CARD (deck_id, to_study, question, answer) VALUES (?,?,?,?)")
-	// if err != nil {
-	// 	return err
-	// }
-
 	repo.ByIdStmt, err = repo.db.Prepare("SELECT * FROM CARD WHERE card_id = ?")
 	if err != nil {
 		return err
@@ -84,7 +77,7 @@ func (repo *CardRepositoryImpl) InitStatements() error {
 	return nil
 }
 
-func (r *CardRepositoryImpl) Create(card model.Card, wrong []model.WrongAnswer) (int64, error) {
+func (r *CardRepositoryImpl) Create(card model.Card) (int64, error) {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return 0, err
@@ -96,8 +89,6 @@ func (r *CardRepositoryImpl) Create(card model.Card, wrong []model.WrongAnswer) 
 		return 0, err
 	}
 
-	// Why I wrote a select here???? How I was expecting this to magically work??
-	// wrongStmt, err := tx.Prepare("SELECT * FROM WRONG_ANSWER WHERE card_id = ?")
 	wrongStmt, err := tx.Prepare("INSERT INTO WRONG_ANSWER (card_id, answer) VALUES (?,?)")
 	if err != nil {
 		return 0, err
@@ -123,8 +114,8 @@ func (r *CardRepositoryImpl) Create(card model.Card, wrong []model.WrongAnswer) 
 	}
 
 	// Insert wrong answers
-	for i := 0; i < len(wrong); i++ {
-		_, err := wrongStmt.Exec(id, wrong[i].Answer)
+	for i := 0; i < len(card.Wrong); i++ {
+		_, err := wrongStmt.Exec(id, card.Wrong[i].Answer)
 		if err != nil {
 			tx.Rollback()
 			if err.(*mysql.MySQLError).Number == 1452 {
@@ -253,9 +244,9 @@ func (r *CardRepositoryImpl) CreateWrong(wrong model.WrongAnswer) (int64, error)
 	return result.LastInsertId()
 }
 
-func (r *CardRepositoryImpl) WrongById(id int64) ([]model.WrongAnswer, error) {
+func (r *CardRepositoryImpl) WrongByCardId(cardID int64) ([]model.WrongAnswer, error) {
 	var wrong []model.WrongAnswer
-	rows, err := r.WrongByIdStmt.Query(id)
+	rows, err := r.WrongByIdStmt.Query(cardID)
 	if err != nil {
 		return nil, err
 	}

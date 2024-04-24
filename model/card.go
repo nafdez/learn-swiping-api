@@ -11,6 +11,6 @@ type Card struct {
 
 type WrongAnswer struct {
 	ID     int64  `json:"wrong_id"`
-	CardID int64  `json:"card_id"`
-	Answer string `json:"answer"`
+	CardID int64  `json:"card_id" binding:"required"` // required for create request
+	Answer string `json:"answer" binding:"required"`
 }

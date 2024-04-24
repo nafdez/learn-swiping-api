@@ -19,4 +19,5 @@ type ReadOneRequest struct {
 	Token string `json:"token"`
 	// Same as suscription one, but id is not required
 	// In fact it is, but is gathered from GET params
+	// Just included here for maintain consistency in deck_service
 }
