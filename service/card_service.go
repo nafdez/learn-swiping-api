@@ -11,10 +11,10 @@ import (
 
 type CardService interface {
 	Create(card.CreateRequest) (int64, error)
-	Card(cardID int64) (model.Card, error)
+	Card(cardID int64, deckID int64) (model.Card, error)
 	Cards(deckID int64) ([]model.Card, error)
 	Update(card.UpdateRequest) error
-	Delete(id int64) error
+	Delete(cardID int64, deckID int64) error
 }
 
 type CardServiceImpl struct {
@@ -41,8 +41,8 @@ func (s *CardServiceImpl) Create(request card.CreateRequest) (int64, error) {
 	return s.repository.Create(card)
 }
 
-func (s *CardServiceImpl) Card(cardID int64) (model.Card, error) {
-	card, err := s.repository.ById(cardID)
+func (s *CardServiceImpl) Card(cardID int64, deckID int64) (model.Card, error) {
+	card, err := s.repository.ById(cardID, deckID)
 	if err != nil {
 		return model.Card{}, err
 	}
@@ -64,12 +64,14 @@ func (s *CardServiceImpl) Cards(deckID int64) ([]model.Card, error) {
 func (s *CardServiceImpl) Update(request card.UpdateRequest) error {
 	if request.Study != "" || request.Question != "" || request.Answer != "" {
 		card := model.Card{
+			ID:       request.ID,
+			DeckID:   request.DeckID,
 			Study:    request.Study,
 			Question: request.Question,
 			Answer:   request.Answer,
 		}
 
-		err := s.repository.Update(request.ID, card)
+		err := s.repository.Update(card)
 		if err != nil {
 			return err
 		}
@@ -95,6 +97,6 @@ func (s *CardServiceImpl) Update(request card.UpdateRequest) error {
 	return nil
 }
 
-func (s *CardServiceImpl) Delete(id int64) error {
-	return s.repository.Delete(id)
+func (s *CardServiceImpl) Delete(cardID int64, deckID int64) error {
+	return s.repository.Delete(cardID, deckID)
 }

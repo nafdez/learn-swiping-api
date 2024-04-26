@@ -40,6 +40,14 @@ func (c *CardControllerImpl) Create(ctx *gin.Context) {
 		return
 	}
 
+	deckID, err := strconv.Atoi(ctx.Param("deckID"))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
+		return
+	}
+
+	request.DeckID = int64(deckID)
+
 	if _, err := c.service.Create(request); err != nil {
 		if errors.Is(err, erro.ErrBadField) {
 			ctx.JSON(http.StatusBadRequest, err.Error())
@@ -55,16 +63,17 @@ func (c *CardControllerImpl) Create(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, gin.H{})
 }
 
-// Retrieves a card by it's id
+// Retrieves a card by it's id inside a deck
 // Method: GET
 func (c *CardControllerImpl) Card(ctx *gin.Context) {
 	cardID, err := strconv.Atoi(ctx.Param("cardID"))
-	if err != nil {
+	deckID, derr := strconv.Atoi(ctx.Param("deckID"))
+	if err != nil || derr != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
 		return
 	}
 
-	card, err := c.service.Card(int64(cardID))
+	card, err := c.service.Card(int64(cardID), int64(deckID))
 	if err != nil {
 		if errors.Is(err, erro.ErrCardNotFound) || errors.Is(err, erro.ErrWrongNotFound) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -104,6 +113,14 @@ func (c *CardControllerImpl) Update(ctx *gin.Context) {
 		return
 	}
 
+	deckID, err := strconv.Atoi(ctx.Param("deckID"))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
+		return
+	}
+
+	request.DeckID = int64(deckID)
+
 	if err := c.service.Update(request); err != nil {
 		if errors.Is(err, erro.ErrCardNotFound) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -122,7 +139,15 @@ func (c *CardControllerImpl) Delete(ctx *gin.Context) {
 		return
 	}
 
-	if err := c.service.Delete(request.Id); err != nil {
+	deckID, err := strconv.Atoi(ctx.Param("deckID"))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
+		return
+	}
+
+	request.DeckID = int64(deckID)
+
+	if err := c.service.Delete(request.Id, request.DeckID); err != nil {
 		if errors.Is(err, erro.ErrCardNotFound) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		}

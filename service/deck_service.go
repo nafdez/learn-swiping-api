@@ -44,27 +44,27 @@ func (s *DeckServiceImpl) Create(request deck.CreateRequest) (int64, error) {
 
 // Wondering what kind of mistakes I have made in my life to be doing this stuff
 func (s *DeckServiceImpl) Deck(request deck.ReadOneRequest) (model.Deck, error) {
-	if request.Id == 0 {
+	if request.DeckID == 0 {
 		return model.Deck{}, erro.ErrBadField
 	}
 
-	return s.repository.ById(request.Id, request.Token)
+	return s.repository.ById(request.DeckID, request.Token)
 }
 
 func (s *DeckServiceImpl) OwnedDecks(request deck.ReadOwnedRequest) ([]model.Deck, error) {
-	if request.Id == 0 && request.Username == "" {
+	if request.AccID == 0 && request.Username == "" {
 		return []model.Deck{}, erro.ErrBadField
 	}
 
-	return s.repository.ByOwner(request.Id, request.Username, request.Token)
+	return s.repository.ByOwner(request.AccID, request.Username, request.Token)
 }
 
 func (s *DeckServiceImpl) Suscriptions(request deck.ReadRequest) ([]model.Deck, error) {
-	if request.Id == 0 {
+	if request.AccID == 0 {
 		return []model.Deck{}, erro.ErrBadField
 	}
 
-	return s.repository.ByUserId(request.Id, request.Token)
+	return s.repository.ByUserId(request.AccID, request.Token)
 }
 
 func (s *DeckServiceImpl) Update(request deck.UpdateRequest) error {

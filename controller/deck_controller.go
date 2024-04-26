@@ -14,8 +14,8 @@ import (
 type DeckController interface {
 	Create(*gin.Context)                 // POST
 	Deck(*gin.Context)                   // GET
-	OwnedDecks(*gin.Context)             // POST (to accept token)
-	Suscriptions(*gin.Context)           // POST (from other users)
+	OwnedDecks(*gin.Context)             // GET Pending
+	Subscriptions(*gin.Context)          // GET Pending
 	Update(*gin.Context)                 // PUT
 	Delete(*gin.Context)                 // DELETE
 	AddDeckSubscription(*gin.Context)    // POST
@@ -64,7 +64,7 @@ func (c *DeckControllerImpl) Deck(ctx *gin.Context) {
 
 	var request deck.ReadOneRequest
 	_ = ctx.ShouldBindJSON(&request) // Not checking on errors since this field is optional
-	request.Id = int64(id)
+	request.DeckID = int64(id)
 
 	deck, err := c.service.Deck(request)
 	if err != nil {
@@ -92,6 +92,10 @@ func (c *DeckControllerImpl) OwnedDecks(ctx *gin.Context) {
 		return
 	}
 
+	if request.Username == "" {
+		request.Username = ctx.Param("username")
+	}
+
 	decks, err := c.service.OwnedDecks(request)
 	if err != nil {
 		if errors.Is(err, erro.ErrBadField) {
@@ -111,7 +115,7 @@ func (c *DeckControllerImpl) OwnedDecks(ctx *gin.Context) {
 
 // Retrieves a list of decks that a user has been subscribed for
 // Method: PPOST
-func (c *DeckControllerImpl) Suscriptions(ctx *gin.Context) {
+func (c *DeckControllerImpl) Subscriptions(ctx *gin.Context) {
 	var request deck.ReadRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": erro.ErrBadField})

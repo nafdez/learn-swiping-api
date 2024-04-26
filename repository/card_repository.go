@@ -13,10 +13,10 @@ import (
 
 type CardRepository interface {
 	Create(model.Card) (int64, error)
-	ById(id int64) (model.Card, error)
+	ById(cardID int64, deckID int64) (model.Card, error)
 	ByDeckId(id int64) ([]model.Card, error)
-	Update(id int64, card model.Card) error
-	Delete(id int64) error
+	Update(card model.Card) error
+	Delete(cardID int64, deckID int64) error
 	CreateWrong(wrong model.WrongAnswer) (int64, error)
 	WrongByCardId(cardID int64) ([]model.WrongAnswer, error)
 	UpdateWrong(id int64, wrong model.WrongAnswer) error
@@ -44,7 +44,8 @@ func NewCardRepository(db *sql.DB) *CardRepositoryImpl {
 
 func (repo *CardRepositoryImpl) InitStatements() error {
 	var err error
-	repo.ByIdStmt, err = repo.db.Prepare("SELECT * FROM CARD WHERE card_id = ?")
+	//
+	repo.ByIdStmt, err = repo.db.Prepare("SELECT * FROM CARD WHERE card_id = ? AND deck_id = ?")
 	if err != nil {
 		return err
 	}
@@ -54,7 +55,8 @@ func (repo *CardRepositoryImpl) InitStatements() error {
 		return err
 	}
 
-	repo.DeleteStmt, err = repo.db.Prepare("DELETE FROM CARD WHERE card_id = ?")
+	//
+	repo.DeleteStmt, err = repo.db.Prepare("DELETE FROM CARD WHERE card_id = ? AND deck_id = ?")
 	if err != nil {
 		return err
 	}
@@ -134,9 +136,9 @@ func (r *CardRepositoryImpl) Create(card model.Card) (int64, error) {
 	return id, nil
 }
 
-func (r *CardRepositoryImpl) ById(id int64) (model.Card, error) {
+func (r *CardRepositoryImpl) ById(cardID int64, deckID int64) (model.Card, error) {
 	var card model.Card
-	row := r.ByIdStmt.QueryRow(id)
+	row := r.ByIdStmt.QueryRow(cardID, deckID)
 
 	err := row.Scan(
 		&card.ID,
@@ -183,7 +185,7 @@ func (r *CardRepositoryImpl) ByDeckId(id int64) ([]model.Card, error) {
 	return cards, nil
 }
 
-func (r *CardRepositoryImpl) Update(id int64, card model.Card) error {
+func (r *CardRepositoryImpl) Update(card model.Card) error {
 	var query strings.Builder
 	var args []any
 	query.WriteString("UPDATE CARD SET")
@@ -192,8 +194,8 @@ func (r *CardRepositoryImpl) Update(id int64, card model.Card) error {
 	updateCardField(&query, &args, "question", card.Question)
 	updateCardField(&query, &args, "answer", card.Answer)
 
-	args = append(args, id)
-	query.WriteString(" WHERE card_id = ?")
+	args = append(args, card.ID, card.DeckID)
+	query.WriteString(" WHERE card_id = ? AND deck_id = ?")
 
 	stmt, err := r.db.Prepare(query.String())
 	if err != nil {
@@ -217,9 +219,9 @@ func (r *CardRepositoryImpl) Update(id int64, card model.Card) error {
 	return nil
 }
 
-func (r *CardRepositoryImpl) Delete(id int64) error {
+func (r *CardRepositoryImpl) Delete(cardID int64, deckID int64) error {
 	// No need to delete wrong answers too because ON DELETE CASCADE will delete them
-	result, err := r.DeleteStmt.Exec(id)
+	result, err := r.DeleteStmt.Exec(cardID, deckID)
 	if err != nil {
 		return err
 	}

@@ -3,7 +3,7 @@ package card
 import "learn-swiping-api/model"
 
 type CreateRequest struct {
-	DeckID   int64               `json:"deck_id" binding:"required"`
+	DeckID   int64               // Providen in GET params
 	Study    string              `json:"study" binding:"required"`
 	Question string              `json:"question" binding:"required"`
 	Answer   string              `json:"answer" binding:"required"`
