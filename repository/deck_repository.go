@@ -53,22 +53,14 @@ func (repo *DeckRepositoryImpl) InitStatements() error {
 		return err
 	}
 
-	// visible = 1 OR visible = ?
-	// To fetch only visible "?" needs to be 1
-	// To fetch also hidden "?" needs to be 0
-	// repo.ByIdStmt, err = repo.db.Prepare("SELECT * FROM DECK WHERE deck_id = ? AND (visible = 1 OR visible = ?)")
-	repo.ByIdStmt, err = repo.db.Prepare(`SELECT d.* FROM DECK d
-											LEFT JOIN ACC_DECK ad ON d.deck_id = ad.deck_id
+	repo.ByIdStmt, err = repo.db.Prepare(`SELECT d.* FROM DECK d 
 											LEFT JOIN ACCOUNT a ON d.acc_id = a.acc_id
-											HERE ad.acc_id = ?
-											AND (d.visible = 1 OR (a.acc_id = ad.acc_id AND a.token = ?))`)
+											WHERE d.deck_id = ? 
+												AND (d.visible = 1 OR a.token = ?);`)
 	if err != nil {
 		return err
 	}
 
-	// repo.ByOwnerStmt, err = repo.db.Prepare("SELECT * FROM DECK WHERE acc_id = ? AND (visible = 1 OR visible = ?)")
-	// Two birds in one shot. Only shows hidden when token of the account matches the deck's owner token
-	// repo.ByOwnerStmt, err = repo.db.Prepare("SELECT d.* FROM DECK d, ACCOUNT acc WHERE (d.acc_id = ? AND 1=1) AND (d.visible = 1 OR (acc.token = ?))")
 	repo.ByOwnerStmt, err = repo.db.Prepare(`SELECT *
 												FROM DECK d
 												LEFT JOIN ACCOUNT a ON d.acc_id = a.acc_id 
@@ -78,9 +70,11 @@ func (repo *DeckRepositoryImpl) InitStatements() error {
 		return err
 	}
 
-	// repo.ByUserIdStmt, err = repo.db.Prepare("SELECT d.* FROM DECK as d, ACC_DECK as ad WHERE ad.acc_id = ? AND d.deck_id = ad.deck_id AND (visible = 1 OR visible = ?)")
-	// repo.ByUserIdStmt, err = repo.db.Prepare("SELECT d.* FROM DECK d JOIN ACC_DECK ad ON d.deck_id = ad.deck_id WHERE ad.acc_id = ? AND (d.visible = 1 OR EXISTS (SELECT 1 FROM ACCOUNT acc WHERE acc.acc_id = ? AND acc.token = ?))")
-	repo.ByUserIdStmt, err = repo.db.Prepare("SELECT d.* FROM DECK d, ACC_DECK ad WHERE ad.acc_id = ? AND d.deck_id = ad.deck_id AND d.visible = 1")
+	repo.ByUserIdStmt, err = repo.db.Prepare(`SELECT d.* FROM DECK d 
+												LEFT JOIN ACC_DECK ad ON d.deck_id = ad.deck_id
+												LEFT JOIN ACCOUNT a ON d.acc_id = a.acc_id
+												WHERE ad.acc_id  = ? 
+													AND (d.visible = 1 OR (a.acc_id = ad.acc_id AND a.token = ?))`)
 	if err != nil {
 		return err
 	}
