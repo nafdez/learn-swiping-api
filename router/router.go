@@ -19,11 +19,14 @@ func NewRouter(init *config.Initialization) *gin.Engine {
 
 	router.GET("/ping", ping)
 
+	// CHAOS ZONE
+	// Proceed with caution
 	authGroup := router.Group("/auth")
 	{
 		authGroup.POST("", init.UserCtrl.Token)
 		authGroup.POST("register", init.UserCtrl.Register)
 		authGroup.POST("login", init.UserCtrl.Login)
+		authGroup.POST("token", init.UserCtrl.Token) // TODO: Migrate to Account fn
 		authGroup.POST("logout", init.UserCtrl.Logout)
 	}
 
@@ -37,7 +40,25 @@ func NewRouter(init *config.Initialization) *gin.Engine {
 	userGroup := router.Group("users")
 	{
 		userGroup.GET(":username", init.UserCtrl.User)
+		userGroup.GET(":username/decks", init.DeckCtrl.OwnedDecks)
+		userGroup.GET(":username/subscribed", init.DeckCtrl.Subscriptions)
+	}
 
+	deckGroup := router.Group("decks")
+	{
+		deckGroup.POST("", init.DeckCtrl.Create)
+		deckGroup.PUT("", init.DeckCtrl.Update)
+		deckGroup.DELETE("", init.DeckCtrl.Delete)
+		deckGroup.GET(":deckID", init.DeckCtrl.Deck)
+
+		deckGroup.POST("subscription", init.DeckCtrl.AddDeckSubscription)
+		deckGroup.DELETE("subscription", init.DeckCtrl.RemoveDeckSubscription)
+
+		deckGroup.POST(":deckID", init.CardCtrl.Create)
+		deckGroup.GET(":deckID/:cardID", init.CardCtrl.Card)
+		deckGroup.GET(":deckID/cards", init.CardCtrl.Cards)
+		deckGroup.PUT(":deckID", init.CardCtrl.Update)
+		deckGroup.DELETE(":deckID", init.CardCtrl.Delete)
 	}
 
 	return router

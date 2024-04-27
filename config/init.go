@@ -9,8 +9,14 @@ import (
 
 type Initialization struct {
 	UserCtrl controller.UserController
-	userSrvc service.UserService
-	userRepo repository.UserRepository
+	// userSrvc service.UserService
+	// userRepo repository.UserRepository
+	DeckCtrl controller.DeckController
+	// deckSrvc service.DeckService
+	// deckRepo repository.DeckRepository
+	CardCtrl controller.CardController
+	// cardSrvc service.CardService
+	// cardRepo repository.CardRepository
 }
 
 func NewInitialization(db *sql.DB) *Initialization {
@@ -18,9 +24,21 @@ func NewInitialization(db *sql.DB) *Initialization {
 	userSrvc := service.NewUserService(userRepo)
 	userCtrl := controller.NewUserController(userSrvc)
 
+	deckRepo := repository.NewDeckRepository(db)
+	deckSrvc := service.NewDeckService(deckRepo)
+	deckCtrl := controller.NewDeckController(deckSrvc)
+
+	cardRepo := repository.NewCardRepository(db)
+	cardSrvc := service.NewCardService(cardRepo)
+	cardCtrl := controller.NewCardController(cardSrvc)
+
 	return &Initialization{
-		userRepo: userRepo,
-		userSrvc: userSrvc,
+		// userRepo: userRepo,
+		// userSrvc: userSrvc,
 		UserCtrl: userCtrl,
+		// deckRepo: deckRepo,
+		// deckSrvc: deckSrvc,
+		DeckCtrl: deckCtrl,
+		CardCtrl: cardCtrl,
 	}
 }

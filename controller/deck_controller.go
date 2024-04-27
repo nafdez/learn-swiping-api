@@ -14,8 +14,8 @@ import (
 type DeckController interface {
 	Create(*gin.Context)                 // POST
 	Deck(*gin.Context)                   // GET
-	OwnedDecks(*gin.Context)             // GET Pending
-	Subscriptions(*gin.Context)          // GET Pending
+	OwnedDecks(*gin.Context)             // GET
+	Subscriptions(*gin.Context)          // GET
 	Update(*gin.Context)                 // PUT
 	Delete(*gin.Context)                 // DELETE
 	AddDeckSubscription(*gin.Context)    // POST
