@@ -56,11 +56,11 @@ func (s *DeckServiceImpl) OwnedDecks(request deck.ReadOwnedRequest) ([]model.Dec
 }
 
 func (s *DeckServiceImpl) Suscriptions(request deck.ReadRequest) ([]model.Deck, error) {
-	if request.AccID == 0 {
+	if request.Username == "" {
 		return []model.Deck{}, erro.ErrBadField
 	}
 
-	return s.repository.ByUserId(request.AccID, request.Token)
+	return s.repository.BySubsUsername(request.Username, request.Token)
 }
 
 func (s *DeckServiceImpl) Update(request deck.UpdateRequest) error {

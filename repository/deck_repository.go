@@ -14,9 +14,9 @@ import (
 
 type DeckRepository interface {
 	Create(model.Deck) (int64, error)
-	ById(id int64, token string) (model.Deck, error)
-	ByOwner(id int64, username string, token string) ([]model.Deck, error)
-	ByUserId(id int64, token string) ([]model.Deck, error) // ACC-DECK table
+	ById(deckID int64, token string) (model.Deck, error)
+	ByOwner(accID int64, username string, token string) ([]model.Deck, error)
+	BySubsUsername(username string, token string) ([]model.Deck, error) // ACC-DECK table
 	Update(id int64, deck model.Deck) error
 	Delete(id int64) error
 	// TODO: Only insert sub if token matches with the account's token of the id
@@ -30,7 +30,7 @@ type DeckRepositoryImpl struct {
 	CreateStmt                 *sql.Stmt
 	ByIdStmt                   *sql.Stmt
 	ByOwnerStmt                *sql.Stmt
-	ByUserIdStmt               *sql.Stmt
+	BySubsUsernameStmt         *sql.Stmt
 	DeleteStmt                 *sql.Stmt
 	AddDeckSubscriptionStmt    *sql.Stmt
 	RemoveDeckSubscriptionStmt *sql.Stmt
@@ -61,7 +61,7 @@ func (repo *DeckRepositoryImpl) InitStatements() error {
 		return err
 	}
 
-	repo.ByOwnerStmt, err = repo.db.Prepare(`SELECT *
+	repo.ByOwnerStmt, err = repo.db.Prepare(`SELECT d.*
 												FROM DECK d
 												LEFT JOIN ACCOUNT a ON d.acc_id = a.acc_id 
 												WHERE (a.acc_id = ? OR a.username = ?) 
@@ -70,11 +70,13 @@ func (repo *DeckRepositoryImpl) InitStatements() error {
 		return err
 	}
 
-	repo.ByUserIdStmt, err = repo.db.Prepare(`SELECT d.* FROM DECK d 
-												LEFT JOIN ACC_DECK ad ON d.deck_id = ad.deck_id
-												LEFT JOIN ACCOUNT a ON d.acc_id = a.acc_id
-												WHERE ad.acc_id  = ? 
-													AND (d.visible = 1 OR (a.acc_id = ad.acc_id AND a.token = ?))`)
+	// revisar
+	repo.BySubsUsernameStmt, err = repo.db.Prepare(`SELECT d.* FROM DECK d 
+														LEFT JOIN ACC_DECK ad ON d.deck_id = ad.deck_id
+														LEFT JOIN ACCOUNT a ON d.acc_id = a.acc_id
+														LEFT JOIN ACCOUNT acc ON ad.acc_id = acc.acc_id
+														WHERE acc.username = ?
+														AND (d.visible = 1 OR (a.acc_id = ad.acc_id AND a.token = ?))`)
 	if err != nil {
 		return err
 	}
@@ -119,13 +121,13 @@ func (r *DeckRepositoryImpl) Create(deck model.Deck) (int64, error) {
 	return result.LastInsertId()
 }
 
-func (r *DeckRepositoryImpl) ById(id int64, token string) (model.Deck, error) {
-	row := r.ByIdStmt.QueryRow(id, token)
+func (r *DeckRepositoryImpl) ById(deckID int64, token string) (model.Deck, error) {
+	row := r.ByIdStmt.QueryRow(deckID, token)
 	return scanDeck(row)
 }
 
-func (r *DeckRepositoryImpl) ByOwner(id int64, username string, token string) ([]model.Deck, error) {
-	rows, err := r.ByOwnerStmt.Query(id, username, token)
+func (r *DeckRepositoryImpl) ByOwner(accID int64, username string, token string) ([]model.Deck, error) {
+	rows, err := r.ByOwnerStmt.Query(accID, username, token)
 	if err != nil {
 		return nil, err
 	}
@@ -133,8 +135,8 @@ func (r *DeckRepositoryImpl) ByOwner(id int64, username string, token string) ([
 	return scanDecks(rows)
 }
 
-func (r *DeckRepositoryImpl) ByUserId(id int64, token string) ([]model.Deck, error) {
-	rows, err := r.ByUserIdStmt.Query(id, token)
+func (r *DeckRepositoryImpl) BySubsUsername(username string, token string) ([]model.Deck, error) {
+	rows, err := r.BySubsUsernameStmt.Query(username, token)
 	if err != nil {
 		return nil, err
 	}
@@ -258,7 +260,7 @@ func scanDeck(row *sql.Row) (model.Deck, error) {
 		&deck.Description,
 		&deck.UpdatedAt,
 		&deck.CreatedAt,
-		deck.Visible,
+		&deck.Visible,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -281,7 +283,7 @@ func scanDecks(rows *sql.Rows) ([]model.Deck, error) {
 			&deck.Description,
 			&deck.UpdatedAt,
 			&deck.CreatedAt,
-			deck.Visible,
+			&deck.Visible,
 		)
 		if err != nil {
 			if err == sql.ErrNoRows {

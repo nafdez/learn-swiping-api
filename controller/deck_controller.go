@@ -59,11 +59,11 @@ func (c *DeckControllerImpl) Create(ctx *gin.Context) {
 // Retrieves a deck by it's id
 // Method: GET
 func (c *DeckControllerImpl) Deck(ctx *gin.Context) {
-	idParam := ctx.Param("id")
+	idParam := ctx.Param("deckID")
 
 	id, err := strconv.Atoi(idParam)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
 		return
 	}
 
@@ -92,11 +92,7 @@ func (c *DeckControllerImpl) Deck(ctx *gin.Context) {
 // Method: POST
 func (c *DeckControllerImpl) OwnedDecks(ctx *gin.Context) {
 	var request deck.ReadOwnedRequest
-	if err := ctx.ShouldBindJSON(&request); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": erro.ErrBadField})
-		return
-	}
-
+	ctx.ShouldBindJSON(&request) // No point checking for errors since it's optional
 	if request.Username == "" {
 		request.Username = ctx.Param("username")
 	}
@@ -119,12 +115,12 @@ func (c *DeckControllerImpl) OwnedDecks(ctx *gin.Context) {
 }
 
 // Retrieves a list of decks that a user has been subscribed for
-// Method: PPOST
+// Method: POST
 func (c *DeckControllerImpl) Subscriptions(ctx *gin.Context) {
 	var request deck.ReadRequest
-	if err := ctx.ShouldBindJSON(&request); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": erro.ErrBadField})
-		return
+	ctx.ShouldBindJSON(&request)
+	if request.Username == "" {
+		request.Username = ctx.Param("username")
 	}
 
 	decks, err := c.service.Suscriptions(request)
@@ -149,7 +145,7 @@ func (c *DeckControllerImpl) Subscriptions(ctx *gin.Context) {
 func (c *DeckControllerImpl) Update(ctx *gin.Context) {
 	var request deck.UpdateRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
 		return
 	}
 
@@ -174,7 +170,7 @@ func (c *DeckControllerImpl) Update(ctx *gin.Context) {
 func (c *DeckControllerImpl) Delete(ctx *gin.Context) {
 	var request deck.DeleteRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
 		return
 	}
 
@@ -191,6 +187,8 @@ func (c *DeckControllerImpl) Delete(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	ctx.JSON(http.StatusOK, gin.H{})
 }
 
 // Subscribes a user to a deck

@@ -2,8 +2,8 @@ package deck
 
 // Suscriptions request
 type ReadRequest struct {
-	AccID int64  `json:"deck_id"`
-	Token string `json:"token"`
+	Username string `json:"username"`
+	Token    string `json:"token"`
 }
 
 // Owned decks request
