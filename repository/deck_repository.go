@@ -48,7 +48,7 @@ func NewDeckRepository(db *sql.DB) *DeckRepositoryImpl {
 
 func (repo *DeckRepositoryImpl) InitStatements() error {
 	var err error
-	repo.CreateStmt, err = repo.db.Prepare("INSERT INTO DECK (owner, title, description, visible) VALUES (?,?,?,?)")
+	repo.CreateStmt, err = repo.db.Prepare("INSERT INTO DECK (acc_id, title, description, visible) VALUES (?, ?, ?, ?)")
 	if err != nil {
 		return err
 	}
@@ -56,7 +56,7 @@ func (repo *DeckRepositoryImpl) InitStatements() error {
 	repo.ByIdStmt, err = repo.db.Prepare(`SELECT d.* FROM DECK d 
 											LEFT JOIN ACCOUNT a ON d.acc_id = a.acc_id
 											WHERE d.deck_id = ? 
-												AND (d.visible = 1 OR a.token = ?);`)
+												AND (d.visible = 1 OR a.token = ?)`)
 	if err != nil {
 		return err
 	}
@@ -65,7 +65,7 @@ func (repo *DeckRepositoryImpl) InitStatements() error {
 												FROM DECK d
 												LEFT JOIN ACCOUNT a ON d.acc_id = a.acc_id 
 												WHERE (a.acc_id = ? OR a.username = ?) 
-												AND (d.visible = 1 OR a.token = ?`)
+												AND (d.visible = 1 OR a.token = ?)`)
 	if err != nil {
 		return err
 	}
@@ -110,6 +110,9 @@ func (r *DeckRepositoryImpl) Create(deck model.Deck) (int64, error) {
 	if err != nil {
 		if err.(*mysql.MySQLError).Number == 1452 {
 			return 0, erro.ErrUserNotFound
+		}
+		if err.(*mysql.MySQLError).Number == 1062 {
+			return 0, erro.ErrDeckExists
 		}
 		return 0, err
 	}

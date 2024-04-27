@@ -35,7 +35,7 @@ func NewDeckController(service service.DeckService) DeckController {
 func (c *DeckControllerImpl) Create(ctx *gin.Context) {
 	var request deck.CreateRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
 		return
 	}
 
@@ -43,6 +43,11 @@ func (c *DeckControllerImpl) Create(ctx *gin.Context) {
 	if err != nil {
 		if errors.Is(err, erro.ErrUserNotFound) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		if errors.Is(err, erro.ErrDeckExists) {
+			ctx.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			return
 		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

@@ -28,10 +28,6 @@ func NewDeckService(repository repository.DeckRepository) DeckService {
 }
 
 func (s *DeckServiceImpl) Create(request deck.CreateRequest) (int64, error) {
-	// if request.Owner == 0 || request.Title == "" {
-	// 	return 0, erro.ErrBadField
-	// }
-
 	deck := model.Deck{
 		Owner:       request.Owner,
 		Title:       request.Title,
