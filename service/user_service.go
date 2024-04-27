@@ -148,8 +148,10 @@ func (s *UserServiceImpl) Update(request user.UpdateRequest) error {
 		return erro.ErrBadField
 	}
 
-	if _, err := mail.ParseAddress(request.Email); err != nil {
-		return erro.ErrInvalidEmail
+	if request.Email != "" {
+		if _, err := mail.ParseAddress(request.Email); err != nil {
+			return erro.ErrInvalidEmail
+		}
 	}
 
 	user, err := s.repository.ByToken(request.Token)
