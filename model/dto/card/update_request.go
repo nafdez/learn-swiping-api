@@ -2,7 +2,7 @@ package card
 
 type UpdateRequest struct {
 	DeckID   int64                // Provided in GET params
-	ID       int64                `json:"card_id" binding:"required"`
+	CardID   int64                `json:"card_id" binding:"required"`
 	Study    string               `json:"study"`
 	Question string               `json:"question"`
 	Answer   string               `json:"answer"`

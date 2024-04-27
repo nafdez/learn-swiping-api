@@ -55,6 +55,7 @@ func (c *CardControllerImpl) Create(ctx *gin.Context) {
 		}
 		if errors.Is(err, erro.ErrDeckNotFound) || errors.Is(err, erro.ErrCardNotFound) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
 		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -77,6 +78,7 @@ func (c *CardControllerImpl) Card(ctx *gin.Context) {
 	if err != nil {
 		if errors.Is(err, erro.ErrCardNotFound) || errors.Is(err, erro.ErrWrongNotFound) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
 		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -98,6 +100,7 @@ func (c *CardControllerImpl) Cards(ctx *gin.Context) {
 	if err != nil {
 		if errors.Is(err, erro.ErrCardNotFound) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
 		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -124,6 +127,7 @@ func (c *CardControllerImpl) Update(ctx *gin.Context) {
 	if err := c.service.Update(request); err != nil {
 		if errors.Is(err, erro.ErrCardNotFound) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
 		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -150,6 +154,7 @@ func (c *CardControllerImpl) Delete(ctx *gin.Context) {
 	if err := c.service.Delete(request.Id, request.DeckID); err != nil {
 		if errors.Is(err, erro.ErrCardNotFound) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
 		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

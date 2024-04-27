@@ -66,7 +66,7 @@ func (repo *CardRepositoryImpl) InitStatements() error {
 		return err
 	}
 
-	repo.WrongByIdStmt, err = repo.db.Prepare("SELECT answer FROM WRONG_ANSWER WHERE card_id = ?")
+	repo.WrongByIdStmt, err = repo.db.Prepare("SELECT wrong_id, answer FROM WRONG_ANSWER WHERE card_id = ?")
 	if err != nil {
 		return err
 	}
@@ -141,7 +141,7 @@ func (r *CardRepositoryImpl) ById(cardID int64, deckID int64) (model.Card, error
 	row := r.ByIdStmt.QueryRow(cardID, deckID)
 
 	err := row.Scan(
-		&card.ID,
+		&card.CardID,
 		&card.DeckID,
 		&card.Study,
 		&card.Question,
@@ -168,7 +168,7 @@ func (r *CardRepositoryImpl) ByDeckId(id int64) ([]model.Card, error) {
 	var card model.Card
 	for rows.Next() {
 		err := rows.Scan(
-			&card.ID,
+			&card.CardID,
 			&card.DeckID,
 			&card.Study,
 			&card.Question,
@@ -194,7 +194,7 @@ func (r *CardRepositoryImpl) Update(card model.Card) error {
 	updateCardField(&query, &args, "question", card.Question)
 	updateCardField(&query, &args, "answer", card.Answer)
 
-	args = append(args, card.ID, card.DeckID)
+	args = append(args, card.CardID, card.DeckID)
 	query.WriteString(" WHERE card_id = ? AND deck_id = ?")
 
 	stmt, err := r.db.Prepare(query.String())
@@ -257,6 +257,7 @@ func (r *CardRepositoryImpl) WrongByCardId(cardID int64) ([]model.WrongAnswer, e
 	var wrongAnswer model.WrongAnswer
 	for rows.Next() {
 		err := rows.Scan(
+			&wrongAnswer.WrongID,
 			&wrongAnswer.Answer,
 		)
 		if err != nil {
@@ -325,7 +326,7 @@ func updateCardField(query *strings.Builder, args *[]any, field string, value an
 		return
 	}
 
-	if query.String() != "UPDATE DECK SET" {
+	if query.String() != "UPDATE CARD SET" && query.String() != "UPDATE WRONG_ANSWER SET" {
 		query.WriteString(",")
 	}
 

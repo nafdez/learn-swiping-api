@@ -64,7 +64,7 @@ func (s *CardServiceImpl) Cards(deckID int64) ([]model.Card, error) {
 func (s *CardServiceImpl) Update(request card.UpdateRequest) error {
 	if request.Study != "" || request.Question != "" || request.Answer != "" {
 		card := model.Card{
-			ID:       request.ID,
+			CardID:   request.CardID,
 			DeckID:   request.DeckID,
 			Study:    request.Study,
 			Question: request.Question,
