@@ -66,7 +66,7 @@ func (repo *CardRepositoryImpl) InitStatements() error {
 		return err
 	}
 
-	repo.WrongByIdStmt, err = repo.db.Prepare("SELECT * FROM WRONG_ANSWER WHERE card_id = ?")
+	repo.WrongByIdStmt, err = repo.db.Prepare("SELECT answer FROM WRONG_ANSWER WHERE card_id = ?")
 	if err != nil {
 		return err
 	}
@@ -257,7 +257,6 @@ func (r *CardRepositoryImpl) WrongByCardId(cardID int64) ([]model.WrongAnswer, e
 	var wrongAnswer model.WrongAnswer
 	for rows.Next() {
 		err := rows.Scan(
-			&wrongAnswer.CardID,
 			&wrongAnswer.Answer,
 		)
 		if err != nil {

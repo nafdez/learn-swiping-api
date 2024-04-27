@@ -6,11 +6,12 @@ type Card struct {
 	Study    string        `json:"study"`
 	Question string        `json:"question"`
 	Answer   string        `json:"answer"`
-	Wrong    []WrongAnswer `json:"wrong"`
+	Wrong    []WrongAnswer `json:"wrong,omitempty"`
 }
 
 type WrongAnswer struct {
-	ID     int64  `json:"wrong_id"`
-	CardID int64  `json:"card_id" binding:"required"` // required for create request
-	Answer string `json:"answer" binding:"required"`
+	ID     int64  `json:"wrong_id,omitempty"`
+	CardID int64  `json:"card_id,omitempty"`
+	Answer string `json:"answer" binding:"required"` // required for create request
+
 }

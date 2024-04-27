@@ -55,7 +55,7 @@ func NewRouter(init *config.Initialization) *gin.Engine {
 		deckGroup.DELETE("subscription", init.DeckCtrl.RemoveDeckSubscription)
 
 		deckGroup.POST(":deckID", init.CardCtrl.Create)
-		deckGroup.GET(":deckID/:cardID", init.CardCtrl.Card)
+		deckGroup.GET(":deckID/cards/:cardID", init.CardCtrl.Card)
 		deckGroup.GET(":deckID/cards", init.CardCtrl.Cards)
 		deckGroup.PUT(":deckID", init.CardCtrl.Update)
 		deckGroup.DELETE(":deckID", init.CardCtrl.Delete)

@@ -196,7 +196,7 @@ func (c *DeckControllerImpl) Delete(ctx *gin.Context) {
 func (c *DeckControllerImpl) AddDeckSubscription(ctx *gin.Context) {
 	var request deck.DeckSuscriptionRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
 		return
 	}
 
@@ -217,7 +217,7 @@ func (c *DeckControllerImpl) AddDeckSubscription(ctx *gin.Context) {
 func (c *DeckControllerImpl) RemoveDeckSubscription(ctx *gin.Context) {
 	var request deck.DeckSuscriptionRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
 		return
 	}
 

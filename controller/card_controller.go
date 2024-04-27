@@ -36,7 +36,7 @@ func NewCardController(service service.CardService) CardController {
 func (c *CardControllerImpl) Create(ctx *gin.Context) {
 	var request card.CreateRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
 		return
 	}
 
