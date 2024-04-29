@@ -32,7 +32,8 @@ func (s *CardServiceImpl) Create(request card.CreateRequest) (int64, error) {
 
 	card := model.Card{
 		DeckID:   request.DeckID,
-		Study:    request.Study,
+		Front:    request.Front,
+		Back:     request.Back,
 		Question: request.Question,
 		Answer:   request.Answer,
 		Wrong:    request.Wrong,
@@ -62,11 +63,12 @@ func (s *CardServiceImpl) Cards(deckID int64) ([]model.Card, error) {
 }
 
 func (s *CardServiceImpl) Update(request card.UpdateRequest) error {
-	if request.Study != "" || request.Question != "" || request.Answer != "" {
+	if request.Front != "" || request.Back != "" || request.Question != "" || request.Answer != "" {
 		card := model.Card{
 			CardID:   request.CardID,
 			DeckID:   request.DeckID,
-			Study:    request.Study,
+			Front:    request.Front,
+			Back:     request.Back,
 			Question: request.Question,
 			Answer:   request.Answer,
 		}

@@ -1,9 +1,11 @@
 package model
 
 type Card struct {
-	CardID   int64         `json:"card_id"`
-	DeckID   int64         `json:"deck_id"`
-	Study    string        `json:"study"`
+	CardID int64 `json:"card_id"`
+	DeckID int64 `json:"deck_id"`
+	// Study    string        `json:"study"`
+	Front    string        `json:"front"`
+	Back     string        `json:"back"`
 	Question string        `json:"question"`
 	Answer   string        `json:"answer"`
 	Wrong    []WrongAnswer `json:"wrong,omitempty"`
