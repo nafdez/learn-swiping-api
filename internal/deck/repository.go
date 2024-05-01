@@ -1,10 +1,9 @@
-package repository
+package deck
 
 import (
 	"database/sql"
 	"fmt"
 	"learn-swiping-api/erro"
-	"learn-swiping-api/model"
 	"log"
 	"strings"
 	"time"
@@ -13,11 +12,11 @@ import (
 )
 
 type DeckRepository interface {
-	Create(model.Deck) (int64, error)
-	ById(deckID int64, token string) (model.Deck, error)
-	ByOwner(accID int64, username string, token string) ([]model.Deck, error)
-	BySubsUsername(username string, token string) ([]model.Deck, error) // ACC-DECK table
-	Update(id int64, deck model.Deck) error
+	Create(Deck) (int64, error)
+	ById(deckID int64, token string) (Deck, error)
+	ByOwner(accID int64, username string, token string) ([]Deck, error)
+	BySubsUsername(username string, token string) ([]Deck, error) // ACC-DECK table
+	Update(id int64, deck Deck) error
 	Delete(id int64) error
 	// TODO: Only insert sub if token matches with the account's token of the id
 	AddDeckSubscription(id int64, deckId int64) error
@@ -107,11 +106,11 @@ func (repo *DeckRepositoryImpl) InitStatements() error {
 	return nil
 }
 
-func (r *DeckRepositoryImpl) Create(deck model.Deck) (int64, error) {
+func (r *DeckRepositoryImpl) Create(deck Deck) (int64, error) {
 	result, err := r.CreateStmt.Exec(deck.Owner, deck.Title, deck.Description, *deck.Visible)
 	if err != nil {
 		if err.(*mysql.MySQLError).Number == 1452 {
-			return 0, erro.ErrUserNotFound
+			return 0, erro.ErrAccountNotFound
 		}
 		if err.(*mysql.MySQLError).Number == 1062 {
 			return 0, erro.ErrDeckExists
@@ -121,12 +120,12 @@ func (r *DeckRepositoryImpl) Create(deck model.Deck) (int64, error) {
 	return result.LastInsertId()
 }
 
-func (r *DeckRepositoryImpl) ById(deckID int64, token string) (model.Deck, error) {
+func (r *DeckRepositoryImpl) ById(deckID int64, token string) (Deck, error) {
 	row := r.ByIdStmt.QueryRow(deckID, token)
 	return scanDeck(row)
 }
 
-func (r *DeckRepositoryImpl) ByOwner(accID int64, username string, token string) ([]model.Deck, error) {
+func (r *DeckRepositoryImpl) ByOwner(accID int64, username string, token string) ([]Deck, error) {
 	rows, err := r.ByOwnerStmt.Query(accID, username, token)
 	if err != nil {
 		return nil, err
@@ -135,7 +134,7 @@ func (r *DeckRepositoryImpl) ByOwner(accID int64, username string, token string)
 	return scanDecks(rows)
 }
 
-func (r *DeckRepositoryImpl) BySubsUsername(username string, token string) ([]model.Deck, error) {
+func (r *DeckRepositoryImpl) BySubsUsername(username string, token string) ([]Deck, error) {
 	rows, err := r.BySubsUsernameStmt.Query(username, token)
 	if err != nil {
 		return nil, err
@@ -144,7 +143,7 @@ func (r *DeckRepositoryImpl) BySubsUsername(username string, token string) ([]mo
 	return scanDecks(rows)
 }
 
-func (r *DeckRepositoryImpl) Update(id int64, deck model.Deck) error {
+func (r *DeckRepositoryImpl) Update(id int64, deck Deck) error {
 	var query strings.Builder
 	var args []any
 	query.WriteString("UPDATE DECK SET")
@@ -251,8 +250,8 @@ func updateDeckField(query *strings.Builder, args *[]any, field string, value an
 	*args = append(*args, value)
 }
 
-func scanDeck(row *sql.Row) (model.Deck, error) {
-	var deck model.Deck
+func scanDeck(row *sql.Row) (Deck, error) {
+	var deck Deck
 	err := row.Scan(
 		&deck.ID,
 		&deck.Owner,
@@ -264,17 +263,17 @@ func scanDeck(row *sql.Row) (model.Deck, error) {
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return model.Deck{}, erro.ErrDeckNotFound
+			return Deck{}, erro.ErrDeckNotFound
 		}
-		return model.Deck{}, err
+		return Deck{}, err
 	}
 
 	return deck, nil
 }
 
-func scanDecks(rows *sql.Rows) ([]model.Deck, error) {
-	var decks []model.Deck
-	var deck model.Deck
+func scanDecks(rows *sql.Rows) ([]Deck, error) {
+	var decks []Deck
+	var deck Deck
 	for rows.Next() {
 		err := rows.Scan(
 			&deck.ID,

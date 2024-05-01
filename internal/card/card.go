@@ -1,9 +1,8 @@
-package model
+package card
 
 type Card struct {
-	CardID int64 `json:"card_id"`
-	DeckID int64 `json:"deck_id"`
-	// Study    string        `json:"study"`
+	CardID   int64         `json:"card_id"`
+	DeckID   int64         `json:"deck_id"`
 	Front    string        `json:"front"`
 	Back     string        `json:"back"`
 	Question string        `json:"question"`
@@ -14,6 +13,5 @@ type Card struct {
 type WrongAnswer struct {
 	WrongID int64  `json:"wrong_id,omitempty"`
 	CardID  int64  `json:"card_id,omitempty"`
-	Answer  string `json:"answer" binding:"required"` // required for create request
-
+	Answer  string `json:"answer"`
 }

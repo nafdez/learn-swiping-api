@@ -1,4 +1,4 @@
-package user
+package account
 
 type UpdateRequest struct {
 	Token    string `json:"token" binding:"required"`

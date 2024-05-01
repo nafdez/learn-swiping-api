@@ -1,10 +1,9 @@
-package repository
+package card
 
 import (
 	"database/sql"
 	"fmt"
 	"learn-swiping-api/erro"
-	"learn-swiping-api/model"
 	"log"
 	"strings"
 
@@ -12,14 +11,14 @@ import (
 )
 
 type CardRepository interface {
-	Create(model.Card) (int64, error)
-	ById(cardID int64, deckID int64) (model.Card, error)
-	ByDeckId(id int64) ([]model.Card, error)
-	Update(card model.Card) error
+	Create(Card) (int64, error)
+	ById(cardID int64, deckID int64) (Card, error)
+	ByDeckId(id int64) ([]Card, error)
+	Update(card Card) error
 	Delete(cardID int64, deckID int64) error
-	CreateWrong(wrong model.WrongAnswer) (int64, error)
-	WrongByCardId(cardID int64) ([]model.WrongAnswer, error)
-	UpdateWrong(id int64, wrong model.WrongAnswer) error
+	CreateWrong(wrong WrongAnswer) (int64, error)
+	WrongByCardId(cardID int64) ([]WrongAnswer, error)
+	UpdateWrong(id int64, wrong WrongAnswer) error
 	DeleteWrong(id int64) error
 }
 
@@ -79,7 +78,7 @@ func (repo *CardRepositoryImpl) InitStatements() error {
 	return nil
 }
 
-func (r *CardRepositoryImpl) Create(card model.Card) (int64, error) {
+func (r *CardRepositoryImpl) Create(card Card) (int64, error) {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return 0, err
@@ -136,8 +135,8 @@ func (r *CardRepositoryImpl) Create(card model.Card) (int64, error) {
 	return id, nil
 }
 
-func (r *CardRepositoryImpl) ById(cardID int64, deckID int64) (model.Card, error) {
-	var card model.Card
+func (r *CardRepositoryImpl) ById(cardID int64, deckID int64) (Card, error) {
+	var card Card
 	row := r.ByIdStmt.QueryRow(cardID, deckID)
 
 	err := row.Scan(
@@ -150,23 +149,23 @@ func (r *CardRepositoryImpl) ById(cardID int64, deckID int64) (model.Card, error
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return model.Card{}, erro.ErrCardNotFound
+			return Card{}, erro.ErrCardNotFound
 		}
-		return model.Card{}, err
+		return Card{}, err
 	}
 
 	return card, nil
 }
 
-func (r *CardRepositoryImpl) ByDeckId(id int64) ([]model.Card, error) {
-	var cards []model.Card
+func (r *CardRepositoryImpl) ByDeckId(id int64) ([]Card, error) {
+	var cards []Card
 	rows, err := r.ByDeckIdStmt.Query(id)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var card model.Card
+	var card Card
 	for rows.Next() {
 		err := rows.Scan(
 			&card.CardID,
@@ -187,7 +186,7 @@ func (r *CardRepositoryImpl) ByDeckId(id int64) ([]model.Card, error) {
 	return cards, nil
 }
 
-func (r *CardRepositoryImpl) Update(card model.Card) error {
+func (r *CardRepositoryImpl) Update(card Card) error {
 	var query strings.Builder
 	var args []any
 	query.WriteString("UPDATE CARD SET")
@@ -241,7 +240,7 @@ func (r *CardRepositoryImpl) Delete(cardID int64, deckID int64) error {
 	return nil
 }
 
-func (r *CardRepositoryImpl) CreateWrong(wrong model.WrongAnswer) (int64, error) {
+func (r *CardRepositoryImpl) CreateWrong(wrong WrongAnswer) (int64, error) {
 	result, err := r.CreateWrongStmt.Exec(wrong.CardID, wrong.Answer)
 	if err != nil {
 		return 0, err
@@ -249,15 +248,15 @@ func (r *CardRepositoryImpl) CreateWrong(wrong model.WrongAnswer) (int64, error)
 	return result.LastInsertId()
 }
 
-func (r *CardRepositoryImpl) WrongByCardId(cardID int64) ([]model.WrongAnswer, error) {
-	var wrong []model.WrongAnswer
+func (r *CardRepositoryImpl) WrongByCardId(cardID int64) ([]WrongAnswer, error) {
+	var wrong []WrongAnswer
 	rows, err := r.WrongByIdStmt.Query(cardID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var wrongAnswer model.WrongAnswer
+	var wrongAnswer WrongAnswer
 	for rows.Next() {
 		err := rows.Scan(
 			&wrongAnswer.WrongID,
@@ -274,7 +273,7 @@ func (r *CardRepositoryImpl) WrongByCardId(cardID int64) ([]model.WrongAnswer, e
 	return wrong, nil
 }
 
-func (r *CardRepositoryImpl) UpdateWrong(id int64, wrong model.WrongAnswer) error {
+func (r *CardRepositoryImpl) UpdateWrong(id int64, wrong WrongAnswer) error {
 	var query strings.Builder
 	var args []any
 	query.WriteString("UPDATE WRONG_ANSWER SET")

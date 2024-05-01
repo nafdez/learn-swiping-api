@@ -1,18 +1,16 @@
-package service
+package deck
 
 import (
 	"learn-swiping-api/erro"
-	"learn-swiping-api/model"
-	"learn-swiping-api/model/dto/deck"
-	"learn-swiping-api/repository"
+	deck "learn-swiping-api/internal/deck/dto"
 	"time"
 )
 
 type DeckService interface {
 	Create(deck.CreateRequest) (int64, error)
-	Deck(deck.ReadOneRequest) (model.Deck, error)
-	OwnedDecks(deck.ReadOwnedRequest) ([]model.Deck, error)
-	Suscriptions(deck.ReadRequest) ([]model.Deck, error) // Should be only accepting ID but for the sake of consistency
+	Deck(deck.ReadOneRequest) (Deck, error)
+	OwnedDecks(deck.ReadOwnedRequest) ([]Deck, error)
+	Suscriptions(deck.ReadRequest) ([]Deck, error) // Should be only accepting ID but for the sake of consistency
 	Update(deck.UpdateRequest) error
 	Delete(deck.DeleteRequest) error
 	AddDeckSubscription(deck.DeckSuscriptionRequest) error
@@ -20,15 +18,15 @@ type DeckService interface {
 }
 
 type DeckServiceImpl struct {
-	repository repository.DeckRepository
+	repository DeckRepository
 }
 
-func NewDeckService(repository repository.DeckRepository) DeckService {
+func NewDeckService(repository DeckRepository) DeckService {
 	return &DeckServiceImpl{repository: repository}
 }
 
 func (s *DeckServiceImpl) Create(request deck.CreateRequest) (int64, error) {
-	deck := model.Deck{
+	deck := Deck{
 		Owner:       request.Owner,
 		Title:       request.Title,
 		Description: request.Description,
@@ -39,25 +37,25 @@ func (s *DeckServiceImpl) Create(request deck.CreateRequest) (int64, error) {
 }
 
 // Wondering what kind of mistakes I have made in my life to be doing this stuff
-func (s *DeckServiceImpl) Deck(request deck.ReadOneRequest) (model.Deck, error) {
+func (s *DeckServiceImpl) Deck(request deck.ReadOneRequest) (Deck, error) {
 	if request.DeckID == 0 {
-		return model.Deck{}, erro.ErrBadField
+		return Deck{}, erro.ErrBadField
 	}
 
 	return s.repository.ById(request.DeckID, request.Token)
 }
 
-func (s *DeckServiceImpl) OwnedDecks(request deck.ReadOwnedRequest) ([]model.Deck, error) {
+func (s *DeckServiceImpl) OwnedDecks(request deck.ReadOwnedRequest) ([]Deck, error) {
 	if request.AccID == 0 && request.Username == "" {
-		return []model.Deck{}, erro.ErrBadField
+		return []Deck{}, erro.ErrBadField
 	}
 
 	return s.repository.ByOwner(request.AccID, request.Username, request.Token)
 }
 
-func (s *DeckServiceImpl) Suscriptions(request deck.ReadRequest) ([]model.Deck, error) {
+func (s *DeckServiceImpl) Suscriptions(request deck.ReadRequest) ([]Deck, error) {
 	if request.Username == "" {
-		return []model.Deck{}, erro.ErrBadField
+		return []Deck{}, erro.ErrBadField
 	}
 
 	return s.repository.BySubsUsername(request.Username, request.Token)
@@ -69,7 +67,7 @@ func (s *DeckServiceImpl) Update(request deck.UpdateRequest) error {
 	}
 
 	// TODO: Only update if requested deck owner matched with the token provided
-	deck := model.Deck{
+	deck := Deck{
 		Title:       request.Title,
 		Description: request.Description,
 		Visible:     request.Visible,

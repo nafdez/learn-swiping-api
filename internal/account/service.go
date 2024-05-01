@@ -1,0 +1,218 @@
+package account
+
+import (
+	"crypto/rand"
+	"database/sql"
+	"encoding/hex"
+	"errors"
+	"learn-swiping-api/erro"
+	account "learn-swiping-api/internal/account/dto"
+	"net/mail"
+	"time"
+
+	"golang.org/x/crypto/bcrypt"
+)
+
+type AccountService interface {
+	Register(account.RegisterRequest) (Account, error)
+	Login(account.LoginRequest) (Account, error)
+	Token(account.TokenRequest) (Account, error) // Login with token
+	Logout(account.TokenRequest) error
+	Account(account.TokenRequest) (Account, error)
+	account(account.PublicRequest) (account.Public, error)
+	Update(account.UpdateRequest) error
+	Delete(account.TokenRequest) error
+	updateToken(old string) (string, error)
+	generateToken() (string, error)
+	hashPassword(password string) (string, error)
+	checkPasswordHash(password, hash string) bool
+}
+
+type AccountServiceImpl struct {
+	repository AccountRepository
+}
+
+func NewAccountService(repository AccountRepository) AccountService {
+	return &AccountServiceImpl{repository: repository}
+}
+
+func (s *AccountServiceImpl) Register(request account.RegisterRequest) (Account, error) {
+	if _, err := mail.ParseAddress(request.Email); err != nil {
+		return Account{}, erro.ErrInvalidEmail
+	}
+
+	hash, err := s.hashPassword(request.Password)
+	if err != nil {
+		return Account{}, err
+	}
+
+	token, err := s.generateToken()
+	if err != nil {
+		return Account{}, err
+	}
+
+	account := Account{
+		Username:     request.Username,
+		Password:     hash,
+		Email:        request.Email,
+		Name:         request.Name,
+		Token:        token,
+		TokenExpires: time.Now().AddDate(0, 0, 7),
+	}
+
+	id, err := s.repository.Create(account)
+	if err != nil {
+		return Account{}, err
+	}
+
+	return s.repository.ById(id)
+}
+
+func (s *AccountServiceImpl) Login(request account.LoginRequest) (Account, error) {
+	account, err := s.repository.ByUsername(request.Username)
+	if err != nil {
+		return Account{}, err
+	}
+
+	if s.checkPasswordHash(request.Password, account.Password) {
+		token, err := s.updateToken(account.Token)
+		if err != nil {
+			return Account{}, err
+		}
+
+		account.Token = token
+		return account, nil
+	}
+
+	return Account{}, nil
+}
+
+// Same as login function but using a token instead of account and password
+func (s *AccountServiceImpl) Token(request account.TokenRequest) (Account, error) {
+	account, err := s.repository.ByToken(request.Token)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return Account{}, erro.ErrInvalidToken
+		}
+		return Account{}, err
+	}
+
+	// Just updating last seen date
+	account.LastSeen = time.Now()
+	err = s.repository.Update(account.ID, Account{LastSeen: account.LastSeen})
+	if err != nil {
+		return Account{}, err
+	}
+
+	return account, nil
+}
+
+func (s *AccountServiceImpl) Logout(request account.TokenRequest) error {
+	// Updating token and not returning to account to invalidate the previous token
+	_, err := s.updateToken(request.Token)
+	return err
+}
+
+func (s *AccountServiceImpl) Account(request account.TokenRequest) (Account, error) {
+	return s.repository.ByToken(request.Token)
+}
+
+// Returns an account details but with some fields hidden
+func (s *AccountServiceImpl) account(request account.PublicRequest) (account.Public, error) {
+	// TODO: Also return a list of it's public decks
+	if request.Username == "" {
+		return account.Public{}, erro.ErrBadField
+	}
+
+	var acc Account
+	acc, err := s.repository.ByUsername(request.Username)
+	if err != nil {
+		return account.Public{}, err
+	}
+
+	accountPublic := account.Public{
+		ID:       acc.ID,
+		Username: acc.Username,
+		LastSeen: acc.LastSeen,
+		Since:    acc.Since,
+	}
+
+	return accountPublic, nil
+}
+
+func (s *AccountServiceImpl) Update(request account.UpdateRequest) error {
+	// If all fields are empty, throw an error
+	if request.Username == "" && request.Password == "" && request.Email == "" && request.Name == "" {
+		return erro.ErrBadField
+	}
+
+	if request.Email != "" {
+		if _, err := mail.ParseAddress(request.Email); err != nil {
+			return erro.ErrInvalidEmail
+		}
+	}
+
+	account, err := s.repository.ByToken(request.Token)
+	if err != nil {
+		return erro.ErrInvalidToken
+	}
+
+	hash, err := s.hashPassword(request.Password)
+	if err != nil {
+		return err
+	}
+
+	update := Account{
+		Username: request.Username,
+		Password: hash,
+		Email:    request.Email,
+		Name:     request.Name,
+		Token:    request.Token,
+	}
+
+	return s.repository.Update(account.ID, update)
+}
+
+func (s *AccountServiceImpl) Delete(request account.TokenRequest) error {
+	return s.repository.Delete(request.Token)
+}
+
+func (s *AccountServiceImpl) updateToken(old string) (string, error) {
+	account, err := s.repository.ByToken(old)
+	if err != nil {
+		return "", err
+	}
+
+	new, err := s.generateToken()
+	if err != nil {
+		return "", err
+	}
+
+	err = s.repository.Update(account.ID, Account{Token: new, TokenExpires: time.Now().AddDate(0, 0, 7)})
+	if err != nil {
+		return "", err
+	}
+
+	return new, nil
+}
+
+// hashPassword hashes the password provided and returns it
+func (s *AccountServiceImpl) hashPassword(password string) (string, error) {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 8)
+	return string(bytes), err
+}
+
+// checkPasswordHash takes a password and a hashed password and returns if the hashed
+// password comes from the password
+func (s *AccountServiceImpl) checkPasswordHash(password, hash string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	return err == nil
+}
+
+func (s *AccountServiceImpl) generateToken() (string, error) {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
+}

@@ -1,46 +1,45 @@
-package controller
+package account
 
 import (
 	"errors"
 	"learn-swiping-api/erro"
-	"learn-swiping-api/model/dto/user"
-	"learn-swiping-api/service"
+	account "learn-swiping-api/internal/account/dto"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
-type UserController interface {
-	Register(*gin.Context) // POST
-	Login(*gin.Context)    // POST
-	Token(*gin.Context)    // POST
-	Logout(*gin.Context)   // POST
-	Account(*gin.Context)  // POST
-	User(*gin.Context)     // GET
-	Update(*gin.Context)   // PUT
-	Delete(*gin.Context)   // DELETE
+type AccountController interface {
+	Register(*gin.Context)      // POST
+	Login(*gin.Context)         // POST
+	Token(*gin.Context)         // POST
+	Logout(*gin.Context)        // POST
+	Account(*gin.Context)       // POST
+	AccountPublic(*gin.Context) // GET
+	Update(*gin.Context)        // PUT
+	Delete(*gin.Context)        // DELETE
 }
 
-type UserControllerImpl struct {
-	service service.UserService
+type AccountControllerImpl struct {
+	service AccountService
 }
 
-func NewUserController(service service.UserService) UserController {
-	return &UserControllerImpl{service: service}
+func NewAccountController(service AccountService) AccountController {
+	return &AccountControllerImpl{service: service}
 }
 
 // Creates a new account
 // Method: POST
-func (c *UserControllerImpl) Register(ctx *gin.Context) {
-	var request user.RegisterRequest
+func (c *AccountControllerImpl) Register(ctx *gin.Context) {
+	var request account.RegisterRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
 		return
 	}
 
-	user, err := c.service.Register(request)
+	account, err := c.service.Register(request)
 	if err != nil {
-		if errors.Is(err, erro.ErrUserExists) {
+		if errors.Is(err, erro.ErrAccountExists) {
 			ctx.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 			return
 		}
@@ -52,13 +51,13 @@ func (c *UserControllerImpl) Register(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, user)
+	ctx.JSON(http.StatusCreated, account)
 }
 
-// Retrieves a user's account if username and password are correct
+// Retrieves a account's account if username and password are correct
 // Method: POST
-func (c *UserControllerImpl) Login(ctx *gin.Context) {
-	var request user.LoginRequest
+func (c *AccountControllerImpl) Login(ctx *gin.Context) {
+	var request account.LoginRequest
 
 	err := ctx.ShouldBindJSON(&request)
 	if err != nil {
@@ -66,9 +65,9 @@ func (c *UserControllerImpl) Login(ctx *gin.Context) {
 		return
 	}
 
-	user, err := c.service.Login(request)
+	account, err := c.service.Login(request)
 	if err != nil {
-		if errors.Is(err, erro.ErrUserNotFound) {
+		if errors.Is(err, erro.ErrAccountNotFound) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
 		}
@@ -76,13 +75,13 @@ func (c *UserControllerImpl) Login(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, user)
+	ctx.JSON(http.StatusOK, account)
 }
 
-// Retrieves a user's account if token provided is correct
+// Retrieves a account's account if token provided is correct
 // Method: POST
-func (c *UserControllerImpl) Token(ctx *gin.Context) {
-	var request user.TokenRequest
+func (c *AccountControllerImpl) Token(ctx *gin.Context) {
+	var request account.TokenRequest
 
 	err := ctx.ShouldBindJSON(&request)
 	if err != nil {
@@ -90,9 +89,9 @@ func (c *UserControllerImpl) Token(ctx *gin.Context) {
 		return
 	}
 
-	user, err := c.service.Token(request)
+	account, err := c.service.Token(request)
 	if err != nil {
-		if errors.Is(err, erro.ErrInvalidToken) || errors.Is(err, erro.ErrUserNotFound) {
+		if errors.Is(err, erro.ErrInvalidToken) || errors.Is(err, erro.ErrAccountNotFound) {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrInvalidToken.Error()})
 			return
 		}
@@ -100,13 +99,13 @@ func (c *UserControllerImpl) Token(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, user)
+	ctx.JSON(http.StatusOK, account)
 }
 
-// Invalidates a user's token to restrict access to the account
+// Invalidates a account's token to restrict access to the account
 // Method: POST
-func (c *UserControllerImpl) Logout(ctx *gin.Context) {
-	var request user.TokenRequest
+func (c *AccountControllerImpl) Logout(ctx *gin.Context) {
+	var request account.TokenRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
 		return
@@ -114,7 +113,7 @@ func (c *UserControllerImpl) Logout(ctx *gin.Context) {
 
 	err := c.service.Logout(request)
 	if err != nil {
-		if errors.Is(err, erro.ErrUserNotFound) {
+		if errors.Is(err, erro.ErrAccountNotFound) {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrInvalidToken.Error()})
 			return
 		}
@@ -125,19 +124,19 @@ func (c *UserControllerImpl) Logout(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{})
 }
 
-// Retrieves a user's account if token provided is correct
+// Retrieves a account's account if token provided is correct
 // TODO: Remove duplicated shit
 // Method: POST
-func (c *UserControllerImpl) Account(ctx *gin.Context) {
-	var request user.TokenRequest
+func (c *AccountControllerImpl) Account(ctx *gin.Context) {
+	var request account.TokenRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
 		return
 	}
 
-	user, err := c.service.Account(request)
+	account, err := c.service.Account(request)
 	if err != nil {
-		if errors.Is(err, erro.ErrUserNotFound) {
+		if errors.Is(err, erro.ErrAccountNotFound) {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrInvalidToken.Error()})
 			return
 		}
@@ -145,20 +144,20 @@ func (c *UserControllerImpl) Account(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, user)
+	ctx.JSON(http.StatusOK, account)
 }
 
 // Retrieves a public profile of an account by it's username
 // Method: GET
-func (c *UserControllerImpl) User(ctx *gin.Context) {
+func (c *AccountControllerImpl) AccountPublic(ctx *gin.Context) {
 	username := ctx.Param("username")
 
-	user, err := c.service.User(user.PublicRequest{Username: username})
+	account, err := c.service.account(account.PublicRequest{Username: username})
 	if err != nil {
 		if errors.Is(err, erro.ErrBadField) {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		}
-		if errors.Is(err, erro.ErrUserNotFound) {
+		if errors.Is(err, erro.ErrAccountNotFound) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
 		}
@@ -166,13 +165,13 @@ func (c *UserControllerImpl) User(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, user)
+	ctx.JSON(http.StatusOK, account)
 }
 
-// Updates a user
+// Updates a account
 // Method: PUT
-func (c *UserControllerImpl) Update(ctx *gin.Context) {
-	var request user.UpdateRequest
+func (c *AccountControllerImpl) Update(ctx *gin.Context) {
+	var request account.UpdateRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
 		return
@@ -180,7 +179,7 @@ func (c *UserControllerImpl) Update(ctx *gin.Context) {
 
 	err := c.service.Update(request)
 	if err != nil {
-		if errors.Is(err, erro.ErrInvalidToken) || errors.Is(err, erro.ErrUserNotFound) {
+		if errors.Is(err, erro.ErrInvalidToken) || errors.Is(err, erro.ErrAccountNotFound) {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrInvalidToken.Error()})
 			return
 		}
@@ -195,10 +194,10 @@ func (c *UserControllerImpl) Update(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{})
 }
 
-// Deletes a user
+// Deletes a account
 // Method: DELETE
-func (c *UserControllerImpl) Delete(ctx *gin.Context) {
-	var request user.TokenRequest
+func (c *AccountControllerImpl) Delete(ctx *gin.Context) {
+	var request account.TokenRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -206,7 +205,7 @@ func (c *UserControllerImpl) Delete(ctx *gin.Context) {
 
 	err := c.service.Delete(request)
 	if err != nil {
-		if errors.Is(err, erro.ErrInvalidToken) || errors.Is(err, erro.ErrUserNotFound) {
+		if errors.Is(err, erro.ErrInvalidToken) || errors.Is(err, erro.ErrAccountNotFound) {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrInvalidToken.Error()})
 			return
 		}

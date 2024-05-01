@@ -1,10 +1,9 @@
-package controller
+package card
 
 import (
 	"errors"
 	"learn-swiping-api/erro"
-	"learn-swiping-api/model/dto/card"
-	"learn-swiping-api/service"
+	card "learn-swiping-api/internal/card/dto"
 	"net/http"
 	"strconv"
 
@@ -24,10 +23,10 @@ type CardController interface {
 }
 
 type CardControllerImpl struct {
-	service service.CardService
+	service CardService
 }
 
-func NewCardController(service service.CardService) CardController {
+func NewCardController(service CardService) CardController {
 	return &CardControllerImpl{service: service}
 }
 

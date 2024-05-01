@@ -1,4 +1,4 @@
-package model
+package deck
 
 import "time"
 

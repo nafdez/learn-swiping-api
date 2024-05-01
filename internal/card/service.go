@@ -1,27 +1,25 @@
-package service
+package card
 
 import (
 	"errors"
 	"learn-swiping-api/erro"
-	"learn-swiping-api/model"
-	"learn-swiping-api/model/dto/card"
-	"learn-swiping-api/repository"
+	card "learn-swiping-api/internal/card/dto"
 	"strconv"
 )
 
 type CardService interface {
 	Create(card.CreateRequest) (int64, error)
-	Card(cardID int64, deckID int64) (model.Card, error)
-	Cards(deckID int64) ([]model.Card, error)
+	Card(cardID int64, deckID int64) (Card, error)
+	Cards(deckID int64) ([]Card, error)
 	Update(card.UpdateRequest) error
 	Delete(cardID int64, deckID int64) error
 }
 
 type CardServiceImpl struct {
-	repository repository.CardRepository
+	repository CardRepository
 }
 
-func NewCardService(repository repository.CardRepository) CardService {
+func NewCardService(repository CardRepository) CardService {
 	return &CardServiceImpl{repository: repository}
 }
 
@@ -30,33 +28,39 @@ func (s *CardServiceImpl) Create(request card.CreateRequest) (int64, error) {
 		return 0, erro.ErrBadField
 	}
 
-	card := model.Card{
+	// Due to poor design choices this is necessary hahah
+	wrongAnswers := make([]WrongAnswer, 0, len(request.Wrong))
+	for _, value := range request.Wrong {
+		wrongAnswers = append(wrongAnswers, WrongAnswer{Answer: value.Answer})
+	}
+
+	card := Card{
 		DeckID:   request.DeckID,
 		Front:    request.Front,
 		Back:     request.Back,
 		Question: request.Question,
 		Answer:   request.Answer,
-		Wrong:    request.Wrong,
+		Wrong:    wrongAnswers,
 	}
 
 	return s.repository.Create(card)
 }
 
-func (s *CardServiceImpl) Card(cardID int64, deckID int64) (model.Card, error) {
+func (s *CardServiceImpl) Card(cardID int64, deckID int64) (Card, error) {
 	card, err := s.repository.ById(cardID, deckID)
 	if err != nil {
-		return model.Card{}, err
+		return Card{}, err
 	}
 
 	card.Wrong, err = s.repository.WrongByCardId(cardID)
 	if err != nil {
-		return model.Card{}, err
+		return Card{}, err
 	}
 
 	return card, nil
 }
 
-func (s *CardServiceImpl) Cards(deckID int64) ([]model.Card, error) {
+func (s *CardServiceImpl) Cards(deckID int64) ([]Card, error) {
 	// Wrong answers should only be needed when viewing one
 	// card at most
 	return s.repository.ByDeckId(deckID)
@@ -64,7 +68,7 @@ func (s *CardServiceImpl) Cards(deckID int64) ([]model.Card, error) {
 
 func (s *CardServiceImpl) Update(request card.UpdateRequest) error {
 	if request.Front != "" || request.Back != "" || request.Question != "" || request.Answer != "" {
-		card := model.Card{
+		card := Card{
 			CardID:   request.CardID,
 			DeckID:   request.DeckID,
 			Front:    request.Front,
@@ -84,7 +88,7 @@ func (s *CardServiceImpl) Update(request card.UpdateRequest) error {
 		affected := 0
 		for _, answer := range request.Wrong {
 			if answer.WrongID != 0 && answer.Answer != "" {
-				err := s.repository.UpdateWrong(answer.WrongID, model.WrongAnswer{Answer: answer.Answer})
+				err := s.repository.UpdateWrong(answer.WrongID, WrongAnswer{Answer: answer.Answer})
 				if err != nil {
 					return err
 				}

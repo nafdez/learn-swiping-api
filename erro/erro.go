@@ -5,10 +5,10 @@ import (
 )
 
 var (
-	ErrUserNotFound     = errors.New("user not found")
-	ErrUserExists       = errors.New("user already exists")
-	ErrAlreadySuscribed = errors.New("user already suscribed to this deck")
-	ErrNotSuscribed     = errors.New("user isn't suscribed to this deck")
+	ErrAccountNotFound  = errors.New("account not found")
+	ErrAccountExists    = errors.New("account already exists")
+	ErrAlreadySuscribed = errors.New("account already suscribed to this deck")
+	ErrNotSuscribed     = errors.New("account isn't suscribed to this deck")
 	ErrInvalidToken     = errors.New("invalid token")
 	ErrInvalidEmail     = errors.New("invalid email")
 	ErrDeckNotFound     = errors.New("deck not found")

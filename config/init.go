@@ -2,35 +2,35 @@ package config
 
 import (
 	"database/sql"
-	"learn-swiping-api/controller"
-	"learn-swiping-api/repository"
-	"learn-swiping-api/service"
+	"learn-swiping-api/internal/account"
+	"learn-swiping-api/internal/card"
+	"learn-swiping-api/internal/deck"
 )
 
 type Initialization struct {
-	UserCtrl controller.UserController
+	UserCtrl account.AccountController
 	// userSrvc service.UserService
 	// userRepo repository.UserRepository
-	DeckCtrl controller.DeckController
+	DeckCtrl deck.DeckController
 	// deckSrvc service.DeckService
 	// deckRepo repository.DeckRepository
-	CardCtrl controller.CardController
+	CardCtrl card.CardController
 	// cardSrvc service.CardService
 	// cardRepo repository.CardRepository
 }
 
 func NewInitialization(db *sql.DB) *Initialization {
-	userRepo := repository.NewUserRepository(db)
-	userSrvc := service.NewUserService(userRepo)
-	userCtrl := controller.NewUserController(userSrvc)
+	userRepo := account.NewAccountRepository(db)
+	userSrvc := account.NewAccountService(userRepo)
+	userCtrl := account.NewAccountController(userSrvc)
 
-	deckRepo := repository.NewDeckRepository(db)
-	deckSrvc := service.NewDeckService(deckRepo)
-	deckCtrl := controller.NewDeckController(deckSrvc)
+	deckRepo := deck.NewDeckRepository(db)
+	deckSrvc := deck.NewDeckService(deckRepo)
+	deckCtrl := deck.NewDeckController(deckSrvc)
 
-	cardRepo := repository.NewCardRepository(db)
-	cardSrvc := service.NewCardService(cardRepo)
-	cardCtrl := controller.NewCardController(cardSrvc)
+	cardRepo := card.NewCardRepository(db)
+	cardSrvc := card.NewCardService(cardRepo)
+	cardCtrl := card.NewCardController(cardSrvc)
 
 	return &Initialization{
 		// userRepo: userRepo,

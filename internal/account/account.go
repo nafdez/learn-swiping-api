@@ -1,8 +1,8 @@
-package model
+package account
 
 import "time"
 
-type User struct {
+type Account struct {
 	ID           int64     `json:"acc_id"`
 	Username     string    `json:"username"`
 	Password     string    `json:"-"`

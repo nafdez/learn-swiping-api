@@ -1,10 +1,9 @@
-package controller
+package deck
 
 import (
 	"errors"
 	"learn-swiping-api/erro"
-	"learn-swiping-api/model/dto/deck"
-	"learn-swiping-api/service"
+	deck "learn-swiping-api/internal/deck/dto"
 	"net/http"
 	"strconv"
 
@@ -23,10 +22,10 @@ type DeckController interface {
 }
 
 type DeckControllerImpl struct {
-	service service.DeckService
+	service DeckService
 }
 
-func NewDeckController(service service.DeckService) DeckController {
+func NewDeckController(service DeckService) DeckController {
 	return &DeckControllerImpl{service: service}
 }
 
@@ -41,7 +40,7 @@ func (c *DeckControllerImpl) Create(ctx *gin.Context) {
 
 	_, err := c.service.Create(request)
 	if err != nil {
-		if errors.Is(err, erro.ErrUserNotFound) {
+		if errors.Is(err, erro.ErrAccountNotFound) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
 		}

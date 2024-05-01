@@ -39,7 +39,7 @@ func NewRouter(init *config.Initialization) *gin.Engine {
 
 	userGroup := router.Group("users")
 	{
-		userGroup.GET(":username", init.UserCtrl.User)
+		userGroup.GET(":username", init.UserCtrl.AccountPublic)
 		userGroup.GET(":username/decks", init.DeckCtrl.OwnedDecks)
 		userGroup.GET(":username/subscribed", init.DeckCtrl.Subscriptions)
 	}
