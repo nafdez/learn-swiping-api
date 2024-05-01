@@ -21,11 +21,12 @@ type AccountRepository interface {
 }
 
 type AccountRepositoryImpl struct {
-	db             *sql.DB
-	CreateStmt     *sql.Stmt
-	ByIdStmt       *sql.Stmt
-	ByUsernameStmt *sql.Stmt
-	DeleteStmt     *sql.Stmt
+	db              *sql.DB
+	CreateStmt      *sql.Stmt
+	ByIdStmt        *sql.Stmt
+	ByUsernameStmt  *sql.Stmt
+	DeleteStmt      *sql.Stmt
+	UnlinkDecksStmt *sql.Stmt
 }
 
 func NewAccountRepository(db *sql.DB) *AccountRepositoryImpl {
@@ -55,6 +56,14 @@ func (r *AccountRepositoryImpl) InitStatements() error {
 	}
 
 	r.DeleteStmt, err = r.db.Prepare("DELETE FROM ACCOUNT WHERE token = ?")
+	if err != nil {
+		return err
+	}
+
+	r.UnlinkDecksStmt, err = r.db.Prepare(`UPDATE DECK d 
+											LEFT JOIN ACCOUNT a ON d.acc_id = a.acc_id
+											SET d.acc_id = 1
+											WHERE d.visible = 1 AND a.token = ?`)
 	if err != nil {
 		return err
 	}
@@ -137,6 +146,15 @@ func (r *AccountRepositoryImpl) Update(id int64, account Account) error {
 }
 
 func (r *AccountRepositoryImpl) Delete(token string) error {
+	// Necessary to not to delete decks when account is removed
+	// deck's owner now is account 1 (deleted user)
+	// Note that only public decks are saved into the
+	// auxiliar account, the hidden ones are removed
+	_, err := r.UnlinkDecksStmt.Exec(token)
+	if err != nil {
+		return err
+	}
+
 	result, err := r.DeleteStmt.Exec(token)
 	if err != nil {
 		return err
