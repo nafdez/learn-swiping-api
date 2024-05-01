@@ -8,11 +8,11 @@ import (
 
 type DeckService interface {
 	Create(deck.CreateRequest) (int64, error)
-	Deck(deck.ReadOneRequest) (Deck, error)
-	OwnedDecks(deck.ReadOwnedRequest) ([]Deck, error)
-	Suscriptions(deck.ReadRequest) ([]Deck, error) // Should be only accepting ID but for the sake of consistency
-	Update(deck.UpdateRequest) error
-	Delete(deck.DeleteRequest) error
+	Deck(req deck.ReadOneRequest, token string) (Deck, error)
+	OwnedDecks(req deck.ReadOwnedRequest, token string) ([]Deck, error)
+	Suscriptions(req deck.ReadRequest, token string) ([]Deck, error) // Should be only accepting ID but for the sake of consistency
+	Update(req deck.UpdateRequest, token string) error
+	Delete(req deck.DeleteRequest, token string) error
 	AddDeckSubscription(deck.DeckSuscriptionRequest) error
 	RemoveDeckSubscription(deck.DeckSuscriptionRequest) error
 }
@@ -37,31 +37,31 @@ func (s *DeckServiceImpl) Create(request deck.CreateRequest) (int64, error) {
 }
 
 // Wondering what kind of mistakes I have made in my life to be doing this stuff
-func (s *DeckServiceImpl) Deck(request deck.ReadOneRequest) (Deck, error) {
+func (s *DeckServiceImpl) Deck(request deck.ReadOneRequest, token string) (Deck, error) {
 	if request.DeckID == 0 {
 		return Deck{}, erro.ErrBadField
 	}
 
-	return s.repository.ById(request.DeckID, request.Token)
+	return s.repository.ById(request.DeckID, token)
 }
 
-func (s *DeckServiceImpl) OwnedDecks(request deck.ReadOwnedRequest) ([]Deck, error) {
+func (s *DeckServiceImpl) OwnedDecks(request deck.ReadOwnedRequest, token string) ([]Deck, error) {
 	if request.AccID == 0 && request.Username == "" {
 		return []Deck{}, erro.ErrBadField
 	}
 
-	return s.repository.ByOwner(request.AccID, request.Username, request.Token)
+	return s.repository.ByOwner(request.AccID, request.Username, token)
 }
 
-func (s *DeckServiceImpl) Suscriptions(request deck.ReadRequest) ([]Deck, error) {
+func (s *DeckServiceImpl) Suscriptions(request deck.ReadRequest, token string) ([]Deck, error) {
 	if request.Username == "" {
 		return []Deck{}, erro.ErrBadField
 	}
 
-	return s.repository.BySubsUsername(request.Username, request.Token)
+	return s.repository.BySubsUsername(request.Username, token)
 }
 
-func (s *DeckServiceImpl) Update(request deck.UpdateRequest) error {
+func (s *DeckServiceImpl) Update(request deck.UpdateRequest, token string) error {
 	if request.Title == "" && request.Description == "" && request.Visible == nil {
 		return erro.ErrBadField
 	}
@@ -74,15 +74,15 @@ func (s *DeckServiceImpl) Update(request deck.UpdateRequest) error {
 		UpdatedAt:   time.Now(),
 	}
 
-	if s.repository.CheckOwnership(request.DeckID, request.Token) {
+	if s.repository.CheckOwnership(request.DeckID, token) {
 		return s.repository.Update(request.DeckID, deck)
 	}
 
 	return erro.ErrInvalidToken
 }
 
-func (s *DeckServiceImpl) Delete(request deck.DeleteRequest) error {
-	if s.repository.CheckOwnership(request.DeckID, request.Token) {
+func (s *DeckServiceImpl) Delete(request deck.DeleteRequest, token string) error {
+	if s.repository.CheckOwnership(request.DeckID, token) {
 		return s.repository.Delete(request.DeckID)
 	}
 	return erro.ErrInvalidToken

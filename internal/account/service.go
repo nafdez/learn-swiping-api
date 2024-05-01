@@ -20,12 +20,12 @@ import (
 type AccountService interface {
 	Register(account.RegisterRequest) (Account, error)
 	Login(account.LoginRequest) (Account, error)
-	Token(account.TokenRequest) (Account, error) // Login with token
-	Logout(account.TokenRequest) error
-	Account(account.TokenRequest) (Account, error)
+	Token(token string) (Account, error) // Login with token
+	Logout(token string) error
+	Account(token string) (Account, error)
 	account(account.PublicRequest) (account.Public, error)
 	Update(account.UpdateRequest) error
-	Delete(account.TokenRequest) error
+	Delete(token string) error
 	updateToken(old string) (string, error)
 	generateToken() (string, error)
 	hashPassword(password string) (string, error)
@@ -92,8 +92,8 @@ func (s *AccountServiceImpl) Login(request account.LoginRequest) (Account, error
 }
 
 // Same as login function but using a token instead of account and password
-func (s *AccountServiceImpl) Token(request account.TokenRequest) (Account, error) {
-	account, err := s.repository.ByToken(request.Token)
+func (s *AccountServiceImpl) Token(token string) (Account, error) {
+	account, err := s.repository.ByToken(token)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return Account{}, erro.ErrInvalidToken
@@ -111,14 +111,14 @@ func (s *AccountServiceImpl) Token(request account.TokenRequest) (Account, error
 	return account, nil
 }
 
-func (s *AccountServiceImpl) Logout(request account.TokenRequest) error {
+func (s *AccountServiceImpl) Logout(token string) error {
 	// Updating token and not returning to account to invalidate the previous token
-	_, err := s.updateToken(request.Token)
+	_, err := s.updateToken(token)
 	return err
 }
 
-func (s *AccountServiceImpl) Account(request account.TokenRequest) (Account, error) {
-	return s.repository.ByToken(request.Token)
+func (s *AccountServiceImpl) Account(token string) (Account, error) {
+	return s.repository.ByToken(token)
 }
 
 // Returns an account details but with some fields hidden
@@ -205,13 +205,13 @@ func (s *AccountServiceImpl) Update(request account.UpdateRequest) error {
 	return s.repository.Update(account.ID, updateAcc)
 }
 
-func (s *AccountServiceImpl) Delete(request account.TokenRequest) error {
-	acc, err := s.repository.ByToken(request.Token)
+func (s *AccountServiceImpl) Delete(token string) error {
+	acc, err := s.repository.ByToken(token)
 	if err != nil {
 		return erro.ErrInvalidToken
 	}
 	picture.Remove(acc.PicID)
-	return s.repository.Delete(request.Token)
+	return s.repository.Delete(token)
 }
 
 func (s *AccountServiceImpl) updateToken(old string) (string, error) {

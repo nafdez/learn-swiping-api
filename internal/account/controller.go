@@ -81,15 +81,13 @@ func (c *AccountControllerImpl) Login(ctx *gin.Context) {
 // Retrieves a account's account if token provided is correct
 // Method: POST
 func (c *AccountControllerImpl) Token(ctx *gin.Context) {
-	var request account.TokenRequest
-
-	err := ctx.ShouldBindJSON(&request)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
+	token := ctx.GetHeader("Token")
+	if token == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrInvalidToken.Error()})
 		return
 	}
 
-	account, err := c.service.Token(request)
+	account, err := c.service.Token(token)
 	if err != nil {
 		if errors.Is(err, erro.ErrInvalidToken) || errors.Is(err, erro.ErrAccountNotFound) {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrInvalidToken.Error()})
@@ -105,13 +103,13 @@ func (c *AccountControllerImpl) Token(ctx *gin.Context) {
 // Invalidates a account's token to restrict access to the account
 // Method: POST
 func (c *AccountControllerImpl) Logout(ctx *gin.Context) {
-	var request account.TokenRequest
-	if err := ctx.ShouldBindJSON(&request); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
+	token := ctx.GetHeader("Token")
+	if token == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrInvalidToken.Error()})
 		return
 	}
 
-	err := c.service.Logout(request)
+	err := c.service.Logout(token)
 	if err != nil {
 		if errors.Is(err, erro.ErrAccountNotFound) {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrInvalidToken.Error()})
@@ -128,13 +126,13 @@ func (c *AccountControllerImpl) Logout(ctx *gin.Context) {
 // TODO: Remove duplicated shit
 // Method: POST
 func (c *AccountControllerImpl) Account(ctx *gin.Context) {
-	var request account.TokenRequest
-	if err := ctx.ShouldBindJSON(&request); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
+	token := ctx.GetHeader("Token")
+	if token == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrInvalidToken.Error()})
 		return
 	}
 
-	account, err := c.service.Account(request)
+	account, err := c.service.Account(token)
 	if err != nil {
 		if errors.Is(err, erro.ErrAccountNotFound) {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrInvalidToken.Error()})
@@ -208,13 +206,13 @@ func (c *AccountControllerImpl) Update(ctx *gin.Context) {
 // Deletes a account
 // Method: DELETE
 func (c *AccountControllerImpl) Delete(ctx *gin.Context) {
-	var request account.TokenRequest
-	if err := ctx.ShouldBindJSON(&request); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	token := ctx.GetHeader("Token")
+	if token == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrInvalidToken.Error()})
 		return
 	}
 
-	err := c.service.Delete(request)
+	err := c.service.Delete(token)
 	if err != nil {
 		if errors.Is(err, erro.ErrInvalidToken) || errors.Is(err, erro.ErrAccountNotFound) {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrInvalidToken.Error()})

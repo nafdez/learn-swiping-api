@@ -58,6 +58,7 @@ func (c *DeckControllerImpl) Create(ctx *gin.Context) {
 // Retrieves a deck by it's id
 // Method: GET
 func (c *DeckControllerImpl) Deck(ctx *gin.Context) {
+	token := ctx.GetHeader("Token") // Optional
 	idParam := ctx.Param("deckID")
 
 	id, err := strconv.Atoi(idParam)
@@ -70,7 +71,7 @@ func (c *DeckControllerImpl) Deck(ctx *gin.Context) {
 	_ = ctx.ShouldBindJSON(&request) // Not checking on errors since this field is optional
 	request.DeckID = int64(id)
 
-	deck, err := c.service.Deck(request)
+	deck, err := c.service.Deck(request, token)
 	if err != nil {
 		if errors.Is(err, erro.ErrBadField) {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -90,13 +91,14 @@ func (c *DeckControllerImpl) Deck(ctx *gin.Context) {
 // Retrieves a list of decks a user has created
 // Method: POST
 func (c *DeckControllerImpl) OwnedDecks(ctx *gin.Context) {
+	token := ctx.GetHeader("Token") // Optional
 	var request deck.ReadOwnedRequest
 	ctx.ShouldBindJSON(&request) // No point checking for errors since it's optional
 	if request.Username == "" {
 		request.Username = ctx.Param("username")
 	}
 
-	decks, err := c.service.OwnedDecks(request)
+	decks, err := c.service.OwnedDecks(request, token)
 	if err != nil {
 		if errors.Is(err, erro.ErrBadField) {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -116,13 +118,14 @@ func (c *DeckControllerImpl) OwnedDecks(ctx *gin.Context) {
 // Retrieves a list of decks that a user has been subscribed for
 // Method: POST
 func (c *DeckControllerImpl) Subscriptions(ctx *gin.Context) {
+	token := ctx.GetHeader("Token") // Optional
 	var request deck.ReadRequest
 	ctx.ShouldBindJSON(&request)
 	if request.Username == "" {
 		request.Username = ctx.Param("username")
 	}
 
-	decks, err := c.service.Suscriptions(request)
+	decks, err := c.service.Suscriptions(request, token)
 	if err != nil {
 		if errors.Is(err, erro.ErrBadField) {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -142,13 +145,18 @@ func (c *DeckControllerImpl) Subscriptions(ctx *gin.Context) {
 // Updates a deck
 // Method: PUT
 func (c *DeckControllerImpl) Update(ctx *gin.Context) {
+	token := ctx.GetHeader("Token")
+	if token == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
+	}
+
 	var request deck.UpdateRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
 		return
 	}
 
-	if err := c.service.Update(request); err != nil {
+	if err := c.service.Update(request, token); err != nil {
 		if errors.Is(err, erro.ErrBadField) || errors.Is(err, erro.ErrInvalidToken) {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
@@ -167,13 +175,18 @@ func (c *DeckControllerImpl) Update(ctx *gin.Context) {
 // Deletes a deck
 // Method: DELETE
 func (c *DeckControllerImpl) Delete(ctx *gin.Context) {
+	token := ctx.GetHeader("Token")
+	if token == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
+	}
+
 	var request deck.DeleteRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
 		return
 	}
 
-	if err := c.service.Delete(request); err != nil {
+	if err := c.service.Delete(request, token); err != nil {
 		if errors.Is(err, erro.ErrInvalidToken) {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
