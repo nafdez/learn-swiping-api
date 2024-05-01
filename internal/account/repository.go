@@ -116,6 +116,7 @@ func (r *AccountRepositoryImpl) Update(id int64, account Account) error {
 	updateField(&query, &args, "passwd", account.Password)
 	updateField(&query, &args, "email", account.Email)
 	updateField(&query, &args, "name", account.Name)
+	updateField(&query, &args, "pic_id", account.PicID)
 	updateField(&query, &args, "token", account.Token)
 	updateField(&query, &args, "token_expire", account.TokenExpires)
 	updateField(&query, &args, "last_seen", time.Now())
@@ -154,6 +155,8 @@ func (r *AccountRepositoryImpl) Delete(token string) error {
 	if err != nil {
 		return err
 	}
+
+	// TODO: Remove pic from filesystem
 
 	result, err := r.DeleteStmt.Exec(token)
 	if err != nil {
@@ -198,6 +201,7 @@ func scanaccount(row *sql.Row) (Account, error) {
 		&account.Email,
 		&account.Password,
 		&account.Name,
+		&account.PicID,
 		&account.Token,
 		&account.TokenExpires,
 		&account.LastSeen,

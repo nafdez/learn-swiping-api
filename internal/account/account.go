@@ -8,6 +8,7 @@ type Account struct {
 	Password     string    `json:"-"`
 	Email        string    `json:"email,omitempty"`
 	Name         string    `json:"name"`
+	PicID        string    `json:"pic_id"`
 	Token        string    `json:"token"`
 	TokenExpires time.Time `json:"token_expires"`
 	LastSeen     time.Time `json:"last_seen"`

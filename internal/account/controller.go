@@ -172,12 +172,23 @@ func (c *AccountControllerImpl) AccountPublic(ctx *gin.Context) {
 // Method: PUT
 func (c *AccountControllerImpl) Update(ctx *gin.Context) {
 	var request account.UpdateRequest
-	if err := ctx.ShouldBindJSON(&request); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
-		return
+	// Don't bother if error is thrown since the picture is an
+	// optional parameter
+	file, err := ctx.FormFile("picture")
+	if err == nil {
+		request.Img = file
 	}
 
-	err := c.service.Update(request)
+	token := ctx.GetHeader("Token")
+	if token == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrInvalidToken.Error()})
+	}
+
+	_ = ctx.ShouldBindJSON(&request)
+
+	request.Token = token
+
+	err = c.service.Update(request)
 	if err != nil {
 		if errors.Is(err, erro.ErrInvalidToken) || errors.Is(err, erro.ErrAccountNotFound) {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrInvalidToken.Error()})

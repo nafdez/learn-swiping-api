@@ -61,6 +61,11 @@ func NewRouter(init *config.Initialization) *gin.Engine {
 		deckGroup.DELETE(":deckID", init.CardCtrl.Delete)
 	}
 
+	pictureGroup := router.Group("pics")
+	{
+		pictureGroup.GET(":picID", init.PictureCtrl.Picture)
+	}
+
 	return router
 
 }

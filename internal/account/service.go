@@ -1,13 +1,17 @@
 package account
 
 import (
+	"bytes"
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
 	"errors"
+	"io"
 	"learn-swiping-api/erro"
 	account "learn-swiping-api/internal/account/dto"
+	"learn-swiping-api/internal/picture"
 	"net/mail"
+	"path/filepath"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -84,7 +88,7 @@ func (s *AccountServiceImpl) Login(request account.LoginRequest) (Account, error
 		return account, nil
 	}
 
-	return Account{}, nil
+	return account, nil
 }
 
 // Same as login function but using a token instead of account and password
@@ -133,6 +137,7 @@ func (s *AccountServiceImpl) account(request account.PublicRequest) (account.Pub
 	accountPublic := account.Public{
 		ID:       acc.ID,
 		Username: acc.Username,
+		PicID:    acc.PicID,
 		LastSeen: acc.LastSeen,
 		Since:    acc.Since,
 	}
@@ -142,38 +147,70 @@ func (s *AccountServiceImpl) account(request account.PublicRequest) (account.Pub
 
 func (s *AccountServiceImpl) Update(request account.UpdateRequest) error {
 	// If all fields are empty, throw an error
-	if request.Username == "" && request.Password == "" && request.Email == "" && request.Name == "" {
+	if request.Username == "" && request.Password == "" && request.Email == "" && request.Name == "" && request.Img == nil {
 		return erro.ErrBadField
 	}
 
+	// Check if token is valid
+	account, err := s.repository.ByToken(request.Token)
+	if err != nil {
+		return erro.ErrInvalidToken
+	}
+
+	// Check if email is valid
 	if request.Email != "" {
 		if _, err := mail.ParseAddress(request.Email); err != nil {
 			return erro.ErrInvalidEmail
 		}
 	}
 
-	account, err := s.repository.ByToken(request.Token)
-	if err != nil {
-		return erro.ErrInvalidToken
+	var updateAcc Account
+
+	// Check if password is not empty then hashing it
+	if request.Password != "" {
+		hash, err := s.hashPassword(request.Password)
+		if err != nil {
+			return err
+		}
+		updateAcc.Password = hash
 	}
 
-	hash, err := s.hashPassword(request.Password)
-	if err != nil {
-		return err
+	if request.Img != nil {
+		img, err := request.Img.Open()
+		if err != nil {
+			return erro.ErrBadField
+		}
+		defer img.Close()
+
+		buf := bytes.NewBuffer(nil)
+		if _, err := io.Copy(buf, img); err != nil {
+			return erro.ErrBadField
+		}
+
+		picture.Remove(account.PicID)
+		picID, err := picture.Store(filepath.Ext(request.Img.Filename), buf.Bytes())
+		if err != nil {
+			return err
+		}
+		updateAcc.PicID = picID
 	}
 
-	update := Account{
-		Username: request.Username,
-		Password: hash,
-		Email:    request.Email,
-		Name:     request.Name,
-		Token:    request.Token,
-	}
+	// If a value is empty it the repository won't update
+	// it anyway
+	updateAcc.Username = request.Username
+	updateAcc.Email = request.Email
+	updateAcc.Name = request.Name
+	updateAcc.Token = request.Token
 
-	return s.repository.Update(account.ID, update)
+	return s.repository.Update(account.ID, updateAcc)
 }
 
 func (s *AccountServiceImpl) Delete(request account.TokenRequest) error {
+	acc, err := s.repository.ByToken(request.Token)
+	if err != nil {
+		return erro.ErrInvalidToken
+	}
+	picture.Remove(acc.PicID)
 	return s.repository.Delete(request.Token)
 }
 

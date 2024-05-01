@@ -257,9 +257,9 @@ func scanDeck(row *sql.Row) (Deck, error) {
 		&deck.Owner,
 		&deck.Title,
 		&deck.Description,
+		&deck.Visible,
 		&deck.UpdatedAt,
 		&deck.CreatedAt,
-		&deck.Visible,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -280,9 +280,9 @@ func scanDecks(rows *sql.Rows) ([]Deck, error) {
 			&deck.Owner,
 			&deck.Title,
 			&deck.Description,
+			&deck.Visible,
 			&deck.UpdatedAt,
 			&deck.CreatedAt,
-			&deck.Visible,
 		)
 		if err != nil {
 			if err == sql.ErrNoRows {
