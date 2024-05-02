@@ -1,6 +1,7 @@
 package progress
 
 import (
+	"errors"
 	"learn-swiping-api/erro"
 	progress "learn-swiping-api/internal/progress/dto"
 	"net/http"
@@ -28,6 +29,8 @@ func NewProgressController(service ProgressService) ProgressController {
 	return &ProgressControllerImpl{service: service}
 }
 
+// Creates a progress record
+// Method: POST
 func (c *ProgressControllerImpl) Create(ctx *gin.Context) {
 	var req progress.AccessRequest
 	if err := request(ctx, &req); err != nil {
@@ -35,9 +38,29 @@ func (c *ProgressControllerImpl) Create(ctx *gin.Context) {
 		return
 	}
 
-	// Call srvc
+	err := c.service.Create(req)
+	if err != nil {
+		if errors.Is(err, erro.ErrCardNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		if errors.Is(err, erro.ErrProgressExists) {
+			ctx.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			return
+		}
+		if errors.Is(err, erro.ErrInvalidToken) {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusCreated, gin.H{})
 }
 
+// Retrieves a progress record
+// Method: GET
 func (c *ProgressControllerImpl) Progress(ctx *gin.Context) {
 	var req progress.AccessRequest
 	token := ctx.GetHeader("Token")
@@ -53,9 +76,21 @@ func (c *ProgressControllerImpl) Progress(ctx *gin.Context) {
 	}
 	req.CardID = int64(cardID)
 
-	// Call srvc
+	progress, err := c.service.Progress(req)
+	if err != nil {
+		if errors.Is(err, erro.ErrProgressNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, progress)
 }
 
+// Updates a progress record
+// Method: PUT
 func (c *ProgressControllerImpl) Update(ctx *gin.Context) {
 	var req progress.UpdateRequest
 	if err := request(ctx, &req); err != nil {
@@ -63,9 +98,25 @@ func (c *ProgressControllerImpl) Update(ctx *gin.Context) {
 		return
 	}
 
-	// Call srvc
+	err := c.service.Update(req)
+	if err != nil {
+		if errors.Is(err, erro.ErrBadField) || errors.Is(err, erro.ErrInvalidToken) {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		if errors.Is(err, erro.ErrProgressNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{})
 }
 
+// Deletes a progress record
+// Method: DELETE
 func (c *ProgressControllerImpl) Delete(ctx *gin.Context) {
 	var req progress.AccessRequest
 	if err := request(ctx, &req); err != nil {
@@ -73,7 +124,19 @@ func (c *ProgressControllerImpl) Delete(ctx *gin.Context) {
 		return
 	}
 
-	// Call srvc
+	if err := c.service.Delete(req); err != nil {
+		if errors.Is(err, erro.ErrInvalidToken) {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		if errors.Is(err, erro.ErrProgressNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{})
 }
 
 // Binds the token header and a JSON body to a struct that implements

@@ -121,6 +121,9 @@ func (r *ProgressRepositoryImpl) Update(req progress.UpdateRequest) error {
 
 	result, err := stmt.Exec(args...)
 	if err != nil {
+		if err.(*mysql.MySQLError).Number == 1048 {
+			return erro.ErrInvalidToken
+		}
 		return err
 	}
 
@@ -139,6 +142,9 @@ func (r *ProgressRepositoryImpl) Update(req progress.UpdateRequest) error {
 func (r *ProgressRepositoryImpl) Delete(req progress.AccessRequest) error {
 	result, err := r.DeleteStmt.Exec(req.Token, req.CardID)
 	if err != nil {
+		if err.(*mysql.MySQLError).Number == 1048 {
+			return erro.ErrInvalidToken
+		}
 		return err
 	}
 
