@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"learn-swiping-api/erro"
+	deck "learn-swiping-api/internal/deck/dto"
 	"log"
 	"strings"
 	"time"
@@ -12,15 +13,15 @@ import (
 )
 
 type DeckRepository interface {
-	Create(Deck) (int64, error)
+	Create(deck.CreateRequest) (int64, error)
 	ById(deckID int64, token string) (Deck, error)
 	ByOwner(accID int64, username string, token string) ([]Deck, error)
 	BySubsUsername(username string, token string) ([]Deck, error) // ACC-DECK table
 	Update(id int64, deck Deck) error
 	Delete(id int64) error
 	// TODO: Only insert sub if token matches with the account's token of the id
-	AddDeckSubscription(id int64, deckId int64) error
-	RemoveDeckSubscription(id int64, deckId int64) error
+	AddDeckSubscription(token string, deckId int64) error
+	RemoveDeckSubscription(token string, deckId int64) error
 	CheckOwnership(deckID int64, token string) bool
 }
 
@@ -47,7 +48,8 @@ func NewDeckRepository(db *sql.DB) *DeckRepositoryImpl {
 
 func (repo *DeckRepositoryImpl) InitStatements() error {
 	var err error
-	repo.CreateStmt, err = repo.db.Prepare("INSERT INTO DECK (acc_id, title, description, visible) VALUES (?, ?, ?, ?)")
+	repo.CreateStmt, err = repo.db.Prepare(`INSERT INTO DECK (acc_id, title, description, visible) 
+												VALUES ((SELECT acc_id FROM ACCOUNT WHERE token = ?), ?, ?, ?)`)
 	if err != nil {
 		return err
 	}
@@ -93,12 +95,12 @@ func (repo *DeckRepositoryImpl) InitStatements() error {
 		return err
 	}
 
-	repo.AddDeckSubscriptionStmt, err = repo.db.Prepare("INSERT INTO ACC_DECK(acc_id, deck_id) VALUES (?, ?)")
+	repo.AddDeckSubscriptionStmt, err = repo.db.Prepare("INSERT INTO ACC_DECK(acc_id, deck_id) VALUES ((SELECT acc_id FROM ACCOUNT WHERE token = ?), ?)")
 	if err != nil {
 		return err
 	}
 
-	repo.RemoveDeckSubscriptionStmt, err = repo.db.Prepare("DELETE FROM ACC_DECK WHERE acc_id = ? AND deck_id = ?")
+	repo.RemoveDeckSubscriptionStmt, err = repo.db.Prepare("DELETE FROM ACC_DECK WHERE acc_id = (SELECT acc_id FROM ACCOUNT WHERE token = ?) AND deck_id = ?")
 	if err != nil {
 		return err
 	}
@@ -106,14 +108,17 @@ func (repo *DeckRepositoryImpl) InitStatements() error {
 	return nil
 }
 
-func (r *DeckRepositoryImpl) Create(deck Deck) (int64, error) {
-	result, err := r.CreateStmt.Exec(deck.Owner, deck.Title, deck.Description, *deck.Visible)
+func (r *DeckRepositoryImpl) Create(deck deck.CreateRequest) (int64, error) {
+	result, err := r.CreateStmt.Exec(deck.Token, deck.Title, deck.Description, deck.Visible)
 	if err != nil {
 		if err.(*mysql.MySQLError).Number == 1452 {
 			return 0, erro.ErrAccountNotFound
 		}
 		if err.(*mysql.MySQLError).Number == 1062 {
 			return 0, erro.ErrDeckExists
+		}
+		if err.(*mysql.MySQLError).Number == 1048 {
+			return 0, erro.ErrInvalidToken
 		}
 		return 0, err
 	}
@@ -202,6 +207,9 @@ func (r *DeckRepositoryImpl) AddDeckSubscription(id int64, deckId int64) error {
 		if err.(*mysql.MySQLError).Number == 1062 {
 			return erro.ErrAlreadySuscribed
 		}
+		if err.(*mysql.MySQLError).Number == 1048 {
+			return erro.ErrInvalidToken
+		}
 		return err
 	}
 	return nil
@@ -210,6 +218,9 @@ func (r *DeckRepositoryImpl) AddDeckSubscription(id int64, deckId int64) error {
 func (r *DeckRepositoryImpl) RemoveDeckSubscription(id int64, deckId int64) error {
 	result, err := r.RemoveDeckSubscriptionStmt.Exec(id, deckId)
 	if err != nil {
+		if err.(*mysql.MySQLError).Number == 1048 {
+			return erro.ErrInvalidToken
+		}
 		return err
 	}
 

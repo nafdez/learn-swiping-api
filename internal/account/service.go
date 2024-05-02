@@ -175,6 +175,8 @@ func (s *AccountServiceImpl) Update(request account.UpdateRequest) error {
 		updateAcc.Password = hash
 	}
 
+	// Check if image file isn't empty, stores it
+	// and then binds the PicID to the user
 	if request.Img != nil {
 		img, err := request.Img.Open()
 		if err != nil {
@@ -202,7 +204,13 @@ func (s *AccountServiceImpl) Update(request account.UpdateRequest) error {
 	updateAcc.Name = request.Name
 	updateAcc.Token = request.Token
 
-	return s.repository.Update(account.ID, updateAcc)
+	err = s.repository.Update(account.ID, updateAcc)
+	if err != nil {
+		picture.Remove(updateAcc.PicID)
+		return err
+	}
+
+	return nil
 }
 
 func (s *AccountServiceImpl) Delete(token string) error {

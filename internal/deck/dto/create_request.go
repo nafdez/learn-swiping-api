@@ -1,7 +1,8 @@
 package deck
 
 type CreateRequest struct {
-	Owner       int64  `json:"owner_id" binding:"required"`
+	Token       string
+	Owner       int64  // Obtained with token
 	Title       string `json:"title" binding:"required"`
 	Description string `json:"description"`
 	Visible     bool   `json:"visible"` // Default hidden

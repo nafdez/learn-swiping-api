@@ -16,10 +16,6 @@ type CardController interface {
 	Cards(*gin.Context)  // GET
 	Update(*gin.Context) // PUT
 	Delete(*gin.Context) // DELETE
-	// CreateAnswer(*gin.Context) // POST
-	// Answers(*gin.Context)      // GET
-	// UpdateAnswer(*gin.Context) // PUT
-	// DeleteAnswer(*gin.Context) // DELETE
 }
 
 type CardControllerImpl struct {
@@ -108,6 +104,8 @@ func (c *CardControllerImpl) Cards(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, cards)
 }
 
+// Updates a card or it's wrong answers
+// Method: PUT
 func (c *CardControllerImpl) Update(ctx *gin.Context) {
 	var request card.UpdateRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {
@@ -135,6 +133,8 @@ func (c *CardControllerImpl) Update(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{})
 }
 
+// Deletes a card and it's wrong answers
+// Method: DELETE
 func (c *CardControllerImpl) Delete(ctx *gin.Context) {
 	var request card.DeleteRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {
@@ -161,18 +161,3 @@ func (c *CardControllerImpl) Delete(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, gin.H{})
 }
-
-// func (c *CardControllerImpl) CreateAnswer(ctx *gin.Context) {
-// }
-
-// func (c *CardControllerImpl) Answers(ctx *gin.Context) {
-// }
-
-// Maybe is worth to separate the update of wrong table
-// func (c *CardControllerImpl) UpdateAnswer(ctx *gin.Context) {
-// }
-
-// func (c *CardControllerImpl) DeleteAnswer(ctx *gin.Context) {
-// }
-
-// TODO: Implement variable amount of deck wrong answers

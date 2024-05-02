@@ -26,14 +26,7 @@ func NewDeckService(repository DeckRepository) DeckService {
 }
 
 func (s *DeckServiceImpl) Create(request deck.CreateRequest) (int64, error) {
-	deck := Deck{
-		Owner:       request.Owner,
-		Title:       request.Title,
-		Description: request.Description,
-		Visible:     &request.Visible,
-	}
-
-	return s.repository.Create(deck)
+	return s.repository.Create(request)
 }
 
 // Wondering what kind of mistakes I have made in my life to be doing this stuff
@@ -89,9 +82,9 @@ func (s *DeckServiceImpl) Delete(request deck.DeleteRequest, token string) error
 }
 
 func (s *DeckServiceImpl) AddDeckSubscription(request deck.DeckSuscriptionRequest) error {
-	return s.repository.AddDeckSubscription(request.UserID, request.DeckID)
+	return s.repository.AddDeckSubscription(request.Token, request.DeckID)
 }
 
 func (s *DeckServiceImpl) RemoveDeckSubscription(request deck.DeckSuscriptionRequest) error {
-	return s.repository.RemoveDeckSubscription(request.UserID, request.DeckID)
+	return s.repository.RemoveDeckSubscription(request.Token, request.DeckID)
 }

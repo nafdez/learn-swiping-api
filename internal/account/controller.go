@@ -171,8 +171,8 @@ func (c *AccountControllerImpl) AccountPublic(ctx *gin.Context) {
 func (c *AccountControllerImpl) Update(ctx *gin.Context) {
 	var request account.UpdateRequest
 
-	// Don't bother if error is thrown since the picture is an
-	// optional parameter
+	// File fetching need to be the first or throwns an error
+	// that there is no file in the body
 	file, err := ctx.FormFile("picture")
 	if err == nil {
 		request.Img = file

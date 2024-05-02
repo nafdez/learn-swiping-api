@@ -32,7 +32,14 @@ func NewDeckController(service DeckService) DeckController {
 // Creates a deck
 // Method: POST
 func (c *DeckControllerImpl) Create(ctx *gin.Context) {
+	token := ctx.GetHeader("Token")
+	if token == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrInvalidToken.Error()})
+		return
+	}
+
 	var request deck.CreateRequest
+	request.Token = token
 	if err := ctx.ShouldBindJSON(&request); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
 		return
@@ -46,6 +53,10 @@ func (c *DeckControllerImpl) Create(ctx *gin.Context) {
 		}
 		if errors.Is(err, erro.ErrDeckExists) {
 			ctx.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			return
+		}
+		if errors.Is(err, erro.ErrInvalidToken) {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -206,7 +217,14 @@ func (c *DeckControllerImpl) Delete(ctx *gin.Context) {
 // Subscribes a user to a deck
 // Method: POST
 func (c *DeckControllerImpl) AddDeckSubscription(ctx *gin.Context) {
+	token := ctx.GetHeader("Token")
+	if token == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrInvalidToken.Error()})
+		return
+	}
+
 	var request deck.DeckSuscriptionRequest
+	request.Token = token
 	if err := ctx.ShouldBindJSON(&request); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
 		return
@@ -215,6 +233,10 @@ func (c *DeckControllerImpl) AddDeckSubscription(ctx *gin.Context) {
 	if err := c.service.AddDeckSubscription(request); err != nil {
 		if errors.Is(err, erro.ErrAlreadySuscribed) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		if errors.Is(err, erro.ErrInvalidToken) {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -227,7 +249,14 @@ func (c *DeckControllerImpl) AddDeckSubscription(ctx *gin.Context) {
 // Unsubscribes a deck from a user
 // Method: DELETE
 func (c *DeckControllerImpl) RemoveDeckSubscription(ctx *gin.Context) {
+	token := ctx.GetHeader("Token")
+	if token == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrInvalidToken.Error()})
+		return
+	}
+
 	var request deck.DeckSuscriptionRequest
+	request.Token = token
 	if err := ctx.ShouldBindJSON(&request); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
 		return
@@ -236,6 +265,10 @@ func (c *DeckControllerImpl) RemoveDeckSubscription(ctx *gin.Context) {
 	if err := c.service.RemoveDeckSubscription(request); err != nil {
 		if errors.Is(err, erro.ErrNotSuscribed) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		if errors.Is(err, erro.ErrInvalidToken) {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
