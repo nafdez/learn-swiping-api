@@ -14,9 +14,6 @@ func NewPictureController() PictureController {
 	return PictureController{}
 }
 
-func Create(ctx *gin.Context) {
-}
-
 func (c *PictureController) Picture(ctx *gin.Context) {
 	picID := ctx.Param("picID")
 	if picID == "" {
@@ -25,12 +22,4 @@ func (c *PictureController) Picture(ctx *gin.Context) {
 	}
 
 	ctx.File("./data/pictures/" + picID)
-}
-
-func Update(ctx *gin.Context) {
-
-}
-
-func Delete(ctx *gin.Context) {
-
 }

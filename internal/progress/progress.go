@@ -6,6 +6,7 @@ type Progress struct {
 	CardID         int64 `json:"card_id"`
 	Priority       int   `json:"priority"`
 	DaysHidden     int   `json:"days_hidden"`
+	WatchCount     int   `json:"watch_count"`
 	PriorityExam   int   `json:"priority_exam"`
 	DaysHiddenExam int   `json:"days_hidden_exam"`
 	AnswerCount    int   `json:"answer_count"`

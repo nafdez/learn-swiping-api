@@ -43,7 +43,7 @@ func NewCardRepository(db *sql.DB) *CardRepositoryImpl {
 
 func (repo *CardRepositoryImpl) InitStatements() error {
 	var err error
-	//
+	// TODO: Implement token check
 	repo.ByIdStmt, err = repo.db.Prepare("SELECT * FROM CARD WHERE card_id = ? AND deck_id = ?")
 	if err != nil {
 		return err

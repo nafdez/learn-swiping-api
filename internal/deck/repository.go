@@ -201,8 +201,8 @@ func (r *DeckRepositoryImpl) Delete(id int64) error {
 	return nil
 }
 
-func (r *DeckRepositoryImpl) AddDeckSubscription(id int64, deckId int64) error {
-	_, err := r.AddDeckSubscriptionStmt.Exec(id, deckId)
+func (r *DeckRepositoryImpl) AddDeckSubscription(token string, deckId int64) error {
+	_, err := r.AddDeckSubscriptionStmt.Exec(token, deckId)
 	if err != nil {
 		if err.(*mysql.MySQLError).Number == 1062 {
 			return erro.ErrAlreadySuscribed
@@ -215,8 +215,8 @@ func (r *DeckRepositoryImpl) AddDeckSubscription(id int64, deckId int64) error {
 	return nil
 }
 
-func (r *DeckRepositoryImpl) RemoveDeckSubscription(id int64, deckId int64) error {
-	result, err := r.RemoveDeckSubscriptionStmt.Exec(id, deckId)
+func (r *DeckRepositoryImpl) RemoveDeckSubscription(token string, deckId int64) error {
+	result, err := r.RemoveDeckSubscriptionStmt.Exec(token, deckId)
 	if err != nil {
 		if err.(*mysql.MySQLError).Number == 1048 {
 			return erro.ErrInvalidToken
