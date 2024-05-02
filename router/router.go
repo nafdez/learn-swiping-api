@@ -61,6 +61,14 @@ func NewRouter(init *config.Initialization) *gin.Engine {
 		deckGroup.DELETE(":deckID", init.CardCtrl.Delete)
 	}
 
+	progressGroup := router.Group("progress")
+	{
+		progressGroup.POST("", init.ProgressCtrl.Create)
+		progressGroup.GET(":cardID", init.ProgressCtrl.Progress)
+		progressGroup.PUT("", init.ProgressCtrl.Update)
+		progressGroup.DELETE("", init.ProgressCtrl.Delete)
+	}
+
 	pictureGroup := router.Group("pics")
 	{
 		pictureGroup.GET(":picID", init.PictureCtrl.Picture)

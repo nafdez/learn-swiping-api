@@ -6,19 +6,15 @@ import (
 	"learn-swiping-api/internal/card"
 	"learn-swiping-api/internal/deck"
 	"learn-swiping-api/internal/picture"
+	"learn-swiping-api/internal/progress"
 )
 
 type Initialization struct {
-	UserCtrl account.AccountController
-	// userSrvc service.UserService
-	// userRepo repository.UserRepository
-	DeckCtrl deck.DeckController
-	// deckSrvc service.DeckService
-	// deckRepo repository.DeckRepository
-	CardCtrl card.CardController
-	// cardSrvc service.CardService
-	// cardRepo repository.CardRepository
-	PictureCtrl picture.PictureController
+	UserCtrl     account.AccountController
+	DeckCtrl     deck.DeckController
+	CardCtrl     card.CardController
+	ProgressCtrl progress.ProgressController
+	PictureCtrl  picture.PictureController
 }
 
 func NewInitialization(db *sql.DB) *Initialization {
@@ -34,16 +30,17 @@ func NewInitialization(db *sql.DB) *Initialization {
 	cardSrvc := card.NewCardService(cardRepo)
 	cardCtrl := card.NewCardController(cardSrvc)
 
+	progressRepo := progress.NewProgressRepository(db)
+	progressSrvc := progress.NewProgressService(progressRepo)
+	progressCtrl := progress.NewProgressController(progressSrvc)
+
 	pictureCtrl := picture.NewPictureController()
 
 	return &Initialization{
-		// userRepo: userRepo,
-		// userSrvc: userSrvc,
-		UserCtrl: userCtrl,
-		// deckRepo: deckRepo,
-		// deckSrvc: deckSrvc,
-		DeckCtrl:    deckCtrl,
-		CardCtrl:    cardCtrl,
-		PictureCtrl: pictureCtrl,
+		UserCtrl:     userCtrl,
+		DeckCtrl:     deckCtrl,
+		CardCtrl:     cardCtrl,
+		ProgressCtrl: progressCtrl,
+		PictureCtrl:  pictureCtrl,
 	}
 }
