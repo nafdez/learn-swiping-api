@@ -170,6 +170,7 @@ func (c *AccountControllerImpl) AccountPublic(ctx *gin.Context) {
 // Method: PUT
 func (c *AccountControllerImpl) Update(ctx *gin.Context) {
 	var request account.UpdateRequest
+
 	// Don't bother if error is thrown since the picture is an
 	// optional parameter
 	file, err := ctx.FormFile("picture")
