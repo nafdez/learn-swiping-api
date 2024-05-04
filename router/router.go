@@ -32,7 +32,7 @@ func NewRouter(init *config.Initialization) *gin.Engine {
 
 	accountGroup := router.Group("account")
 	{
-		accountGroup.POST("", init.UserCtrl.Account)
+		accountGroup.GET("", init.UserCtrl.Account)
 		accountGroup.PUT("", init.UserCtrl.Update)
 		accountGroup.DELETE("", init.UserCtrl.Delete)
 	}
@@ -55,10 +55,10 @@ func NewRouter(init *config.Initialization) *gin.Engine {
 		deckGroup.DELETE("subscription", init.DeckCtrl.RemoveDeckSubscription)
 
 		deckGroup.POST(":deckID", init.CardCtrl.Create)
-		deckGroup.GET(":deckID/cards/:cardID", init.CardCtrl.Card)
+		deckGroup.GET(":deckID/:cardID", init.CardCtrl.Card)
 		deckGroup.GET(":deckID/cards", init.CardCtrl.Cards)
-		deckGroup.PUT(":deckID", init.CardCtrl.Update)
-		deckGroup.DELETE(":deckID", init.CardCtrl.Delete)
+		deckGroup.PUT(":deckID/:cardID", init.CardCtrl.Update)
+		deckGroup.DELETE(":deckID/:cardID", init.CardCtrl.Delete)
 	}
 
 	progressGroup := router.Group("progress")

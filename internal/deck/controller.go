@@ -158,7 +158,8 @@ func (c *DeckControllerImpl) Subscriptions(ctx *gin.Context) {
 func (c *DeckControllerImpl) Update(ctx *gin.Context) {
 	token := ctx.GetHeader("Token")
 	if token == "" {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrInvalidToken.Error()})
+		return
 	}
 
 	var request deck.UpdateRequest
@@ -189,6 +190,7 @@ func (c *DeckControllerImpl) Delete(ctx *gin.Context) {
 	token := ctx.GetHeader("Token")
 	if token == "" {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
+		return
 	}
 
 	var request deck.DeleteRequest

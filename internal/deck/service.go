@@ -75,6 +75,7 @@ func (s *DeckServiceImpl) Update(request deck.UpdateRequest, token string) error
 }
 
 func (s *DeckServiceImpl) Delete(request deck.DeleteRequest, token string) error {
+	// Doesn't work as intended. revisar
 	if s.repository.CheckOwnership(request.DeckID, token) {
 		return s.repository.Delete(request.DeckID)
 	}

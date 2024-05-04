@@ -74,6 +74,8 @@ func (c *ProgressControllerImpl) Progress(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
 		return
 	}
+
+	req.Token = token
 	req.CardID = int64(cardID)
 
 	progress, err := c.service.Progress(req)

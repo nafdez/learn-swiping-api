@@ -36,7 +36,7 @@ func NewCardRepository(db *sql.DB) *CardRepositoryImpl {
 	repo := &CardRepositoryImpl{db: db}
 	err := repo.InitStatements()
 	if err != nil {
-		log.Println(err)
+		log.Fatalln(err)
 	}
 	return repo
 }

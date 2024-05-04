@@ -33,7 +33,7 @@ func NewAccountRepository(db *sql.DB) *AccountRepositoryImpl {
 	repo := &AccountRepositoryImpl{db: db}
 	err := repo.InitStatements()
 	if err != nil {
-		log.Println(err)
+		log.Fatalln(err)
 	}
 	return repo
 }

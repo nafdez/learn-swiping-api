@@ -1,6 +1,6 @@
 package card
 
 type DeleteRequest struct {
-	Id     int64 `json:"card_id" binding:"required"`
+	CardID int64
 	DeckID int64 // Provided in GET Params
 }

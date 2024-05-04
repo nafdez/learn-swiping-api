@@ -113,12 +113,14 @@ func (c *CardControllerImpl) Update(ctx *gin.Context) {
 		return
 	}
 
-	deckID, err := strconv.Atoi(ctx.Param("deckID"))
-	if err != nil {
+	cardID, err := strconv.Atoi(ctx.Param("cardID"))
+	deckID, derr := strconv.Atoi(ctx.Param("deckID"))
+	if err != nil || derr != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
 		return
 	}
 
+	request.CardID = int64(cardID)
 	request.DeckID = int64(deckID)
 
 	if err := c.service.Update(request); err != nil {
@@ -136,21 +138,20 @@ func (c *CardControllerImpl) Update(ctx *gin.Context) {
 // Deletes a card and it's wrong answers
 // Method: DELETE
 func (c *CardControllerImpl) Delete(ctx *gin.Context) {
-	var request card.DeleteRequest
-	if err := ctx.ShouldBindJSON(&request); err != nil {
+	// var request card.DeleteRequest
+	// if err := ctx.ShouldBindJSON(&request); err != nil {
+	// 	ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
+	// 	return
+	// }
+
+	cardID, err := strconv.Atoi(ctx.Param("cardID"))
+	deckID, derr := strconv.Atoi(ctx.Param("deckID"))
+	if err != nil || derr != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
 		return
 	}
 
-	deckID, err := strconv.Atoi(ctx.Param("deckID"))
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
-		return
-	}
-
-	request.DeckID = int64(deckID)
-
-	if err := c.service.Delete(request.Id, request.DeckID); err != nil {
+	if err := c.service.Delete(int64(cardID), int64(deckID)); err != nil {
 		if errors.Is(err, erro.ErrCardNotFound) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return

@@ -14,7 +14,7 @@ type AccountController interface {
 	Login(*gin.Context)         // POST
 	Token(*gin.Context)         // POST
 	Logout(*gin.Context)        // POST
-	Account(*gin.Context)       // POST
+	Account(*gin.Context)       // GET
 	AccountPublic(*gin.Context) // GET
 	Update(*gin.Context)        // PUT
 	Delete(*gin.Context)        // DELETE
@@ -124,7 +124,7 @@ func (c *AccountControllerImpl) Logout(ctx *gin.Context) {
 
 // Retrieves a account's account if token provided is correct
 // TODO: Remove duplicated shit
-// Method: POST
+// Method: GET
 func (c *AccountControllerImpl) Account(ctx *gin.Context) {
 	token := ctx.GetHeader("Token")
 	if token == "" {

@@ -41,7 +41,7 @@ func NewDeckRepository(db *sql.DB) *DeckRepositoryImpl {
 	repo := &DeckRepositoryImpl{db: db}
 	err := repo.InitStatements()
 	if err != nil {
-		log.Println(err)
+		log.Fatalln(err)
 	}
 	return repo
 }
@@ -249,7 +249,11 @@ func updateDeckField(query *strings.Builder, args *[]any, field string, value an
 		return
 	}
 
-	if value == "" || value == nil {
+	if b, ok := value.(*bool); ok {
+		if b == nil {
+			return
+		}
+	} else if value == "" || value == nil {
 		return
 	}
 
@@ -297,9 +301,9 @@ func scanDecks(rows *sql.Rows) ([]Deck, error) {
 		)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				return decks, erro.ErrDeckNotFound
+				return []Deck{}, erro.ErrDeckNotFound
 			}
-			return decks, err
+			return []Deck{}, err
 		}
 		decks = append(decks, deck)
 	}

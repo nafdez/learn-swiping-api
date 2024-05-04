@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"learn-swiping-api/erro"
 	progress "learn-swiping-api/internal/progress/dto"
+	"log"
 	"strings"
 
 	"github.com/go-sql-driver/mysql"
@@ -25,7 +26,12 @@ type ProgressRepositoryImpl struct {
 }
 
 func NewProgressRepository(db *sql.DB) ProgressRepository {
-	return &ProgressRepositoryImpl{db: db}
+	repo := &ProgressRepositoryImpl{db: db}
+	err := repo.InitStatements()
+	if err != nil {
+		log.Fatalln(err)
+	}
+	return repo
 }
 
 func (r *ProgressRepositoryImpl) InitStatements() error {
@@ -52,6 +58,7 @@ func (r *ProgressRepositoryImpl) InitStatements() error {
 }
 
 func (r *ProgressRepositoryImpl) Create(req progress.AccessRequest) (int64, error) {
+	log.Println(req.Token, req.CardID)
 	result, err := r.CreateStmt.Exec(req.Token, req.CardID)
 	if err != nil {
 		if err.(*mysql.MySQLError).Number == 1452 {
@@ -161,7 +168,15 @@ func (r *ProgressRepositoryImpl) Delete(req progress.AccessRequest) error {
 }
 
 func updateProgressField(query *strings.Builder, args *[]any, field string, value any) {
-	if value == "" || value == nil {
+	if b, ok := value.(*bool); ok {
+		if b == nil {
+			return
+		}
+	} else if i, ok := value.(*int); ok {
+		if i == nil {
+			return
+		}
+	} else if value == "" || value == nil {
 		return
 	}
 
