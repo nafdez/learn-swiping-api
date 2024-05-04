@@ -29,7 +29,6 @@ type CardRepositoryImpl struct {
 	DeleteStmt      *sql.Stmt
 	CreateWrongStmt *sql.Stmt
 	WrongByIdStmt   *sql.Stmt
-	// DeleteWrongStmt *sql.Stmt
 }
 
 func NewCardRepository(db *sql.DB) *CardRepositoryImpl {
@@ -69,11 +68,6 @@ func (repo *CardRepositoryImpl) InitStatements() error {
 	if err != nil {
 		return err
 	}
-
-	// repo.DeleteWrongStmt, err = repo.db.Prepare("DELETE FROM WRONG_ANSWER WHERE wrong_id = ?")
-	// if err != nil {
-	// 	return err
-	// }
 
 	return nil
 }
@@ -176,13 +170,15 @@ func (r *CardRepositoryImpl) ByDeckId(id int64) ([]Card, error) {
 			&card.Answer,
 		)
 		if err != nil {
-			if err == sql.ErrNoRows {
-				return nil, erro.ErrCardNotFound
-			}
 			return cards, err
 		}
 		cards = append(cards, card)
 	}
+
+	if len(cards) == 0 {
+		return nil, erro.ErrCardNotFound
+	}
+
 	return cards, nil
 }
 
@@ -240,14 +236,6 @@ func (r *CardRepositoryImpl) Delete(cardID int64, deckID int64) error {
 	return nil
 }
 
-// func (r *CardRepositoryImpl) CreateWrong(wrong WrongAnswer) (int64, error) {
-// 	result, err := r.CreateWrongStmt.Exec(wrong.CardID, wrong.Answer)
-// 	if err != nil {
-// 		return 0, err
-// 	}
-// 	return result.LastInsertId()
-// }
-
 func (r *CardRepositoryImpl) WrongByCardId(cardID int64) ([]WrongAnswer, error) {
 	var wrong []WrongAnswer
 	rows, err := r.WrongByIdStmt.Query(cardID)
@@ -263,13 +251,15 @@ func (r *CardRepositoryImpl) WrongByCardId(cardID int64) ([]WrongAnswer, error) 
 			&wrongAnswer.Answer,
 		)
 		if err != nil {
-			if err == sql.ErrNoRows {
-				return nil, erro.ErrWrongNotFound
-			}
 			return wrong, err
 		}
 		wrong = append(wrong, wrongAnswer)
 	}
+
+	if len(wrong) == 0 {
+		return nil, erro.ErrWrongNotFound
+	}
+
 	return wrong, nil
 }
 
@@ -304,24 +294,6 @@ func (r *CardRepositoryImpl) UpdateWrong(id int64, wrong WrongAnswer) error {
 
 	return nil
 }
-
-// func (r *CardRepositoryImpl) DeleteWrong(id int64) error {
-// 	result, err := r.DeleteWrongStmt.Exec(id)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	affected, err := result.RowsAffected()
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	if affected == 0 {
-// 		return erro.ErrCardNotFound
-// 	}
-
-// 	return nil
-// }
 
 func updateCardField(query *strings.Builder, args *[]any, field string, value any) {
 	if value == "" {

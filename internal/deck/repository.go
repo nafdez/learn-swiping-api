@@ -300,12 +300,14 @@ func scanDecks(rows *sql.Rows) ([]Deck, error) {
 			&deck.CreatedAt,
 		)
 		if err != nil {
-			if err == sql.ErrNoRows {
-				return []Deck{}, erro.ErrDeckNotFound
-			}
 			return []Deck{}, err
 		}
 		decks = append(decks, deck)
 	}
+
+	if len(decks) == 0 {
+		return []Deck{}, erro.ErrDeckNotFound
+	}
+
 	return decks, nil
 }
