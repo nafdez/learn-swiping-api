@@ -54,7 +54,7 @@ func (c *AccountControllerImpl) Register(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, account)
 }
 
-// Retrieves a account's account if username and password are correct
+// Retrieves an account if username and password are correct
 // Method: POST
 func (c *AccountControllerImpl) Login(ctx *gin.Context) {
 	var request account.LoginRequest
@@ -78,7 +78,7 @@ func (c *AccountControllerImpl) Login(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, account)
 }
 
-// Retrieves a account's account if token provided is correct
+// Retrieves an account if token is correct
 // Method: POST
 func (c *AccountControllerImpl) Token(ctx *gin.Context) {
 	token := ctx.GetHeader("Token")
@@ -100,7 +100,7 @@ func (c *AccountControllerImpl) Token(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, account)
 }
 
-// Invalidates a account's token to restrict access to the account
+// Invalidates a token to restrict access to the account
 // Method: POST
 func (c *AccountControllerImpl) Logout(ctx *gin.Context) {
 	token := ctx.GetHeader("Token")
@@ -122,8 +122,7 @@ func (c *AccountControllerImpl) Logout(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{})
 }
 
-// Retrieves a account's account if token provided is correct
-// TODO: Remove duplicated shit
+// Retrieves an account if provided token is correct
 // Method: GET
 func (c *AccountControllerImpl) Account(ctx *gin.Context) {
 	token := ctx.GetHeader("Token")
@@ -166,7 +165,7 @@ func (c *AccountControllerImpl) AccountPublic(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, account)
 }
 
-// Updates a account
+// Updates an account
 // Method: PUT
 func (c *AccountControllerImpl) Update(ctx *gin.Context) {
 	var request account.UpdateRequest
@@ -204,7 +203,7 @@ func (c *AccountControllerImpl) Update(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{})
 }
 
-// Deletes a account
+// Deletes an account
 // Method: DELETE
 func (c *AccountControllerImpl) Delete(ctx *gin.Context) {
 	token := ctx.GetHeader("Token")
