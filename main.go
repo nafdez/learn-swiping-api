@@ -5,6 +5,7 @@ import (
 	"learn-swiping-api/config/database"
 	"learn-swiping-api/router"
 	"log"
+	"os"
 
 	"github.com/joho/godotenv"
 )
@@ -23,5 +24,9 @@ func main() {
 	init := config.NewInitialization(db)
 	router := router.NewRouter(init)
 
-	router.Run(":8080")
+	port := os.Getenv("PORT")
+	if len(port) == 0 {
+		port = "9999"
+	}
+	router.Run(":" + port)
 }
