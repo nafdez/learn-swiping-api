@@ -155,6 +155,7 @@ func (r *DeckRepositoryImpl) Update(id int64, deck Deck) error {
 
 	updateDeckField(&query, &args, "title", deck.Title)
 	updateDeckField(&query, &args, "description", deck.Description)
+	updateDeckField(&query, &args, "pic_id", deck.PicID)
 	updateDeckField(&query, &args, "updated_at", deck.UpdatedAt)
 	updateDeckField(&query, &args, "visible", deck.Visible)
 
@@ -272,6 +273,7 @@ func scanDeck(row *sql.Row) (Deck, error) {
 		&deck.Owner,
 		&deck.Title,
 		&deck.Description,
+		&deck.PicID,
 		&deck.Visible,
 		&deck.UpdatedAt,
 		&deck.CreatedAt,
@@ -295,6 +297,7 @@ func scanDecks(rows *sql.Rows) ([]Deck, error) {
 			&deck.Owner,
 			&deck.Title,
 			&deck.Description,
+			&deck.PicID,
 			&deck.Visible,
 			&deck.UpdatedAt,
 			&deck.CreatedAt,

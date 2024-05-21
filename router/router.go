@@ -23,11 +23,11 @@ func NewRouter(init *config.Initialization) *gin.Engine {
 	// Proceed with caution
 	authGroup := router.Group("/auth")
 	{
-		authGroup.POST("", init.UserCtrl.Token)
+		authGroup.GET("", init.UserCtrl.Token)
 		authGroup.POST("register", init.UserCtrl.Register)
 		authGroup.POST("login", init.UserCtrl.Login)
-		authGroup.POST("token", init.UserCtrl.Token) // TODO: Migrate to Account fn
-		authGroup.POST("logout", init.UserCtrl.Logout)
+		authGroup.GET("token", init.UserCtrl.Token) // TODO: Migrate to Account fn
+		authGroup.DELETE("logout", init.UserCtrl.Logout)
 	}
 
 	accountGroup := router.Group("account")
@@ -47,7 +47,7 @@ func NewRouter(init *config.Initialization) *gin.Engine {
 	deckGroup := router.Group("decks")
 	{
 		deckGroup.POST("", init.DeckCtrl.Create)
-		deckGroup.PUT("", init.DeckCtrl.Update)
+		deckGroup.PUT(":deckID", init.DeckCtrl.Update)
 		deckGroup.DELETE("", init.DeckCtrl.Delete)
 		deckGroup.GET(":deckID", init.DeckCtrl.Deck)
 

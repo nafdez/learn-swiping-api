@@ -7,6 +7,7 @@ type Deck struct {
 	Owner       int64     `json:"owner"`
 	Title       string    `json:"title"`
 	Description string    `json:"description"`
+	PicID       string    `json:"pic_id"`
 	Visible     *bool     `json:"visible"`
 	UpdatedAt   time.Time `json:"updated_at"`
 	CreatedAt   time.Time `json:"created_at"`

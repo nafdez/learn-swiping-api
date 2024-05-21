@@ -40,7 +40,7 @@ func NewAccountRepository(db *sql.DB) *AccountRepositoryImpl {
 
 func (r *AccountRepositoryImpl) InitStatements() error {
 	var err error
-	r.CreateStmt, err = r.db.Prepare("INSERT INTO ACCOUNT (Username, passwd, email, name, token, token_expire) VALUES (?, ?, ?, ?, ?, ?)")
+	r.CreateStmt, err = r.db.Prepare("INSERT INTO ACCOUNT (Username, passwd, email, name, pic_id, token, token_expire) VALUES (?, ?, ?, ?, ?, ?, ?)")
 	if err != nil {
 		return err
 	}
@@ -73,7 +73,7 @@ func (r *AccountRepositoryImpl) InitStatements() error {
 
 func (r *AccountRepositoryImpl) Create(account Account) (int64, error) {
 	// TODO: make this method take undetermined number of account parameters to create a new account
-	result, err := r.CreateStmt.Exec(account.Username, account.Password, account.Email, account.Name, account.Token, account.TokenExpires)
+	result, err := r.CreateStmt.Exec(account.Username, account.Password, account.Email, account.Name, account.PicID, account.Token, account.TokenExpires)
 	if err != nil {
 		if err.(*mysql.MySQLError).Number == 1062 {
 			return 0, erro.ErrAccountExists

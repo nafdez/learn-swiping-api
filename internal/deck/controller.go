@@ -143,7 +143,7 @@ func (c *DeckControllerImpl) Subscriptions(ctx *gin.Context) {
 			return
 		}
 		if errors.Is(err, erro.ErrDeckNotFound) {
-			ctx.JSON(http.StatusNotFound, gin.H{"error": erro.ErrNotSuscribed})
+			ctx.JSON(http.StatusNotFound, gin.H{"error": erro.ErrNotSuscribed.Error()})
 			return
 		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -156,17 +156,29 @@ func (c *DeckControllerImpl) Subscriptions(ctx *gin.Context) {
 // Updates a deck
 // Method: PUT
 func (c *DeckControllerImpl) Update(ctx *gin.Context) {
+	var request deck.UpdateRequest
+
+	// File fetching need to be the first or throwns an error
+	// that there is no file in the body
+	file, err := ctx.FormFile("picture")
+	if err == nil {
+		request.Img = file
+	}
+
+	// Header Token needed to update
 	token := ctx.GetHeader("Token")
 	if token == "" {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrInvalidToken.Error()})
 		return
 	}
 
-	var request deck.UpdateRequest
-	if err := ctx.ShouldBindJSON(&request); err != nil {
+	// Param deckID needed to update
+	if deckID := ctx.Param("deckID"); deckID == "" {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
 		return
 	}
+
+	_ = ctx.ShouldBindJSON(&request)
 
 	if err := c.service.Update(request, token); err != nil {
 		if errors.Is(err, erro.ErrBadField) || errors.Is(err, erro.ErrInvalidToken) {

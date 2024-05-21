@@ -1,8 +1,12 @@
 package deck
 
 import (
+	"bytes"
+	"io"
 	"learn-swiping-api/erro"
 	deck "learn-swiping-api/internal/deck/dto"
+	"learn-swiping-api/internal/picture"
+	"path/filepath"
 	"time"
 )
 
@@ -26,6 +30,7 @@ func NewDeckService(repository DeckRepository) DeckService {
 }
 
 func (s *DeckServiceImpl) Create(request deck.CreateRequest) (int64, error) {
+	request.PicID = "default_deck_pic_1.png"
 	return s.repository.Create(request)
 }
 
@@ -55,11 +60,11 @@ func (s *DeckServiceImpl) Suscriptions(request deck.ReadRequest, token string) (
 }
 
 func (s *DeckServiceImpl) Update(request deck.UpdateRequest, token string) error {
-	if request.Title == "" && request.Description == "" && request.Visible == nil {
+	// If all fields are empty, throw an error
+	if request.Title == "" && request.Description == "" && request.Visible == nil && request.Img == nil {
 		return erro.ErrBadField
 	}
 
-	// TODO: Only update if requested deck owner matched with the token provided
 	deck := Deck{
 		Title:       request.Title,
 		Description: request.Description,
@@ -67,6 +72,35 @@ func (s *DeckServiceImpl) Update(request deck.UpdateRequest, token string) error
 		UpdatedAt:   time.Now(),
 	}
 
+	// Check if image file isn't empty, stores it
+	// and then binds the PicID to the user
+	if request.Img != nil {
+		// Necesary to remove the previous pic
+		oldDeck, err := s.repository.ById(request.DeckID, token)
+		if err != nil {
+			return err
+		}
+
+		img, err := request.Img.Open()
+		if err != nil {
+			return erro.ErrBadField
+		}
+		defer img.Close()
+
+		buf := bytes.NewBuffer(nil)
+		if _, err := io.Copy(buf, img); err != nil {
+			return erro.ErrBadField
+		}
+
+		picture.Remove(oldDeck.PicID)
+		picID, err := picture.Store(filepath.Ext(request.Img.Filename), buf.Bytes())
+		if err != nil {
+			return err
+		}
+		deck.PicID = picID
+	}
+
+	// TODO: Only update if requested deck owner matched with the token provided directly into the update query if possible
 	if s.repository.CheckOwnership(request.DeckID, token) {
 		return s.repository.Update(request.DeckID, deck)
 	}

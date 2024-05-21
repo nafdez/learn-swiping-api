@@ -2,14 +2,15 @@ package account
 
 import (
 	"bytes"
-	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io"
 	"learn-swiping-api/erro"
 	account "learn-swiping-api/internal/account/dto"
 	"learn-swiping-api/internal/picture"
+	"math/rand"
 	"net/mail"
 	"path/filepath"
 	"time"
@@ -55,11 +56,15 @@ func (s *AccountServiceImpl) Register(request account.RegisterRequest) (Account,
 		return Account{}, err
 	}
 
+	// Default picture on account creation
+	picID := fmt.Sprintf("default_profile_%d.png", (rand.Intn(6) + 1))
+
 	account := Account{
 		Username:     request.Username,
 		Password:     hash,
 		Email:        request.Email,
 		Name:         request.Name,
+		PicID:        picID,
 		Token:        token,
 		TokenExpires: time.Now().AddDate(0, 0, 7),
 	}
