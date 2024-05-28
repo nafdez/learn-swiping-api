@@ -2,6 +2,7 @@ package deck
 
 import (
 	"errors"
+	"fmt"
 	"learn-swiping-api/erro"
 	deck "learn-swiping-api/internal/deck/dto"
 	"net/http"
@@ -45,7 +46,7 @@ func (c *DeckControllerImpl) Create(ctx *gin.Context) {
 		return
 	}
 
-	_, err := c.service.Create(request)
+	deckID, err := c.service.Create(request)
 	if err != nil {
 		if errors.Is(err, erro.ErrAccountNotFound) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -63,7 +64,7 @@ func (c *DeckControllerImpl) Create(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, gin.H{})
+	ctx.JSON(http.StatusCreated, gin.H{"deck_id": deckID})
 }
 
 // Retrieves a deck by it's id
@@ -163,6 +164,10 @@ func (c *DeckControllerImpl) Update(ctx *gin.Context) {
 	file, err := ctx.FormFile("picture")
 	if err == nil {
 		request.Img = file
+	} else {
+		fmt.Println(err.Error())
+		ctx.JSON(http.StatusTeapot, gin.H{"error": err.Error()})
+		return
 	}
 
 	// Header Token needed to update
@@ -173,10 +178,13 @@ func (c *DeckControllerImpl) Update(ctx *gin.Context) {
 	}
 
 	// Param deckID needed to update
-	if deckID := ctx.Param("deckID"); deckID == "" {
+	deckIDSTR := ctx.Param("deckID")
+	deckID, err := strconv.Atoi(deckIDSTR)
+	if deckID == 0 {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
 		return
 	}
+	request.DeckID = int64(deckID)
 
 	_ = ctx.ShouldBindJSON(&request)
 

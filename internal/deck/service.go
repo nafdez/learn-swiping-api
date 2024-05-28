@@ -2,6 +2,7 @@ package deck
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"learn-swiping-api/erro"
 	deck "learn-swiping-api/internal/deck/dto"
@@ -76,6 +77,7 @@ func (s *DeckServiceImpl) Update(request deck.UpdateRequest, token string) error
 	// and then binds the PicID to the user
 	if request.Img != nil {
 		// Necesary to remove the previous pic
+		fmt.Println(request.DeckID, token)
 		oldDeck, err := s.repository.ById(request.DeckID, token)
 		if err != nil {
 			return err
