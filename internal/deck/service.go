@@ -32,7 +32,16 @@ func NewDeckService(repository DeckRepository) DeckService {
 
 func (s *DeckServiceImpl) Create(request deck.CreateRequest) (int64, error) {
 	request.PicID = "default_deck_pic_1.png"
-	return s.repository.Create(request)
+
+	deckID, err := s.repository.Create(request)
+	if err != nil {
+		return 0, err
+	}
+
+	// TODO: Check if error and rollback
+	s.repository.AddDeckSubscription(request.Token, deckID)
+
+	return 0, nil
 }
 
 // Wondering what kind of mistakes I have made in my life to be doing this stuff

@@ -84,16 +84,17 @@ func (s *AccountServiceImpl) Login(request account.LoginRequest) (Account, error
 	}
 
 	if s.checkPasswordHash(request.Password, account.Password) {
-		token, err := s.updateToken(account.Token)
-		if err != nil {
-			return Account{}, err
+		if time.Now().After(account.TokenExpires) {
+			token, err := s.updateToken(account.Token)
+			if err != nil {
+				return Account{}, err
+			}
+			account.Token = token
 		}
-
-		account.Token = token
 		return account, nil
 	}
 
-	return account, nil
+	return Account{}, erro.ErrAccountNotFound
 }
 
 // Same as login function but using a token instead of account and password
