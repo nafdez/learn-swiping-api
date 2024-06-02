@@ -20,6 +20,8 @@ type DeckController interface {
 	Delete(*gin.Context)                 // DELETE
 	AddDeckSubscription(*gin.Context)    // POST
 	RemoveDeckSubscription(*gin.Context) // DELETE
+	DeckDetails(ctx *gin.Context)
+	DeckDetailsShop(ctx *gin.Context)
 }
 
 type DeckControllerImpl struct {
@@ -69,6 +71,7 @@ func (c *DeckControllerImpl) Create(ctx *gin.Context) {
 
 // Retrieves a deck by it's id
 // Method: GET
+// DEPRECATED
 func (c *DeckControllerImpl) Deck(ctx *gin.Context) {
 	token := ctx.GetHeader("Token") // Optional
 	idParam := ctx.Param("deckID")
@@ -180,7 +183,7 @@ func (c *DeckControllerImpl) Update(ctx *gin.Context) {
 	// Param deckID needed to update
 	deckIDSTR := ctx.Param("deckID")
 	deckID, err := strconv.Atoi(deckIDSTR)
-	if deckID == 0 {
+	if err != nil || deckID == 0 {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
 		return
 	}
@@ -213,13 +216,13 @@ func (c *DeckControllerImpl) Delete(ctx *gin.Context) {
 		return
 	}
 
-	var request deck.DeleteRequest
-	if err := ctx.ShouldBindJSON(&request); err != nil {
+	deckID, err := strconv.Atoi(ctx.Param("deckID"))
+	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
 		return
 	}
 
-	if err := c.service.Delete(request, token); err != nil {
+	if err := c.service.Delete(int64(deckID), token); err != nil {
 		if errors.Is(err, erro.ErrInvalidToken) {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
@@ -245,11 +248,15 @@ func (c *DeckControllerImpl) AddDeckSubscription(ctx *gin.Context) {
 		return
 	}
 
-	var request deck.DeckSuscriptionRequest
-	request.Token = token
-	if err := ctx.ShouldBindJSON(&request); err != nil {
+	deckID, err := strconv.Atoi(ctx.Param("deckID"))
+	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
 		return
+	}
+
+	request := deck.DeckSuscriptionRequest{
+		Token:  token,
+		DeckID: int64(deckID),
 	}
 
 	if err := c.service.AddDeckSubscription(request); err != nil {
@@ -277,11 +284,15 @@ func (c *DeckControllerImpl) RemoveDeckSubscription(ctx *gin.Context) {
 		return
 	}
 
-	var request deck.DeckSuscriptionRequest
-	request.Token = token
-	if err := ctx.ShouldBindJSON(&request); err != nil {
+	deckID, err := strconv.Atoi(ctx.Param("deckID"))
+	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
 		return
+	}
+
+	request := deck.DeckSuscriptionRequest{
+		Token:  token,
+		DeckID: int64(deckID),
 	}
 
 	if err := c.service.RemoveDeckSubscription(request); err != nil {
@@ -298,4 +309,66 @@ func (c *DeckControllerImpl) RemoveDeckSubscription(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{})
+}
+
+func (c *DeckControllerImpl) DeckDetails(ctx *gin.Context) {
+	token := ctx.GetHeader("Token")
+	if token == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrInvalidToken.Error()})
+		return
+	}
+
+	deckID, err := strconv.Atoi(ctx.Param("deckID"))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
+		return
+	}
+
+	var mode int8 = 0 // Default, subs view
+
+	username := ctx.Param("username")
+	if username == "" {
+		mode = 1 // if doesn't has a username, it means it came from owned decks
+	}
+
+	var details deck.Details
+	if details, err = c.service.DeckDetails(mode, int64(deckID), token); err != nil {
+		if errors.Is(err, erro.ErrDeckNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		if errors.Is(err, erro.ErrInvalidToken) {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, details)
+}
+
+func (c *DeckControllerImpl) DeckDetailsShop(ctx *gin.Context) {
+	deckID, err := strconv.Atoi(ctx.Param("deckID"))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
+		return
+	}
+
+	var details deck.Details
+	// mode 2 means shop view
+	if details, err = c.service.DeckDetails(2, int64(deckID), ""); err != nil {
+		if errors.Is(err, erro.ErrDeckNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		if errors.Is(err, erro.ErrInvalidToken) {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, details)
 }

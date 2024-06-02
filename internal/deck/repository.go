@@ -23,6 +23,10 @@ type DeckRepository interface {
 	AddDeckSubscription(token string, deckId int64) error
 	RemoveDeckSubscription(token string, deckId int64) error
 	CheckOwnership(deckID int64, token string) bool
+
+	DeckDetailsSubscription(deckID int64, token string) (deck.Details, error)
+	DeckDetailsOwner(deckID int64, token string) (deck.Details, error)
+	DeckDetailsShop(deckID int64) (deck.Details, error)
 }
 
 type DeckRepositoryImpl struct {
@@ -35,6 +39,10 @@ type DeckRepositoryImpl struct {
 	AddDeckSubscriptionStmt    *sql.Stmt
 	RemoveDeckSubscriptionStmt *sql.Stmt
 	CheckOwnerStmt             *sql.Stmt
+
+	DeckDetailsOwnerStmt *sql.Stmt
+	DeckDetailsShopStmt  *sql.Stmt
+	DeckDetailsSubsStmt  *sql.Stmt
 }
 
 func NewDeckRepository(db *sql.DB) *DeckRepositoryImpl {
@@ -101,6 +109,87 @@ func (repo *DeckRepositoryImpl) InitStatements() error {
 	}
 
 	repo.RemoveDeckSubscriptionStmt, err = repo.db.Prepare("DELETE FROM ACC_DECK WHERE acc_id = (SELECT acc_id FROM ACCOUNT WHERE token = ?) AND deck_id = ?")
+	if err != nil {
+		return err
+	}
+
+	repo.DeckDetailsOwnerStmt, err = repo.db.Prepare(`SELECT 
+														DECK.title,
+														DECK.description,
+														DECK.pic_id,
+														COUNT(ACC_DECK.deck_id) AS subscriptions,
+                                                        COUNT(adSubscribed.deck_id) As is_subscribed,
+    													DECK.visible,
+    													DECK.updated_at,
+    													DECK.created_at
+													FROM 
+    													DECK 
+													LEFT JOIN 
+    													ACC_DECK ON DECK.deck_id = ACC_DECK.deck_id
+													LEFT JOIN
+														ACCOUNT ON DECK.acc_id = ACCOUNT.acc_id
+													LEFT JOIN 
+														ACC_DECK As adSubscribed ON adSubscribed.deck_id = DECK.deck_id AND adSubscribed.acc_id = ACCOUNT.acc_id
+													WHERE 
+    													DECK.deck_id = ?
+    													AND ACCOUNT.token = ?
+													GROUP BY 
+    													DECK.deck_id`)
+	if err != nil {
+		return err
+	}
+
+	repo.DeckDetailsShopStmt, err = repo.db.Prepare(`SELECT 
+														DECK.title,
+														DECK.description,
+														DECK.pic_id,
+    													COUNT(ACC_DECK.deck_id) AS subscriptions,
+                                                        COUNT(adSubscribed.deck_id) As is_subscribed,
+														COUNT(CARD.card_id) AS cards,
+														ACCOUNT.acc_id,
+														ACCOUNT.username,
+														DECK.updated_at,
+														DECK.created_at
+													FROM 
+														DECK 
+													LEFT JOIN 
+														ACC_DECK ON DECK.deck_id = ACC_DECK.deck_id
+													LEFT JOIN
+														CARD ON DECK.deck_id = CARD.deck_id
+													LEFT JOIN
+														ACCOUNT ON DECK.acc_id = ACCOUNT.acc_id
+													LEFT JOIN 
+														ACC_DECK As adSubscribed ON adSubscribed.deck_id = DECK.deck_id AND adSubscribed.acc_id = ACCOUNT.acc_id
+													WHERE 
+														DECK.deck_id = ?
+													GROUP BY
+														DECK.deck_id`)
+	if err != nil {
+		return err
+	}
+
+	repo.DeckDetailsSubsStmt, err = repo.db.Prepare(`SELECT
+														DECK.title,
+														DECK.description,
+														DECK.pic_id,
+														coalesce((count(PROGRESS.progress_id) / COUNT(CARD.card_id) * 100), 0) AS total_progress,
+														COUNT(PROGRESS.progress_id) AS cards_revised,
+														coalesce((count(CARD.card_id) - count(PROGRESS.progress_id)), 0) AS cards_remaining,
+														DECK.updated_at,
+														DECK.created_at
+													FROM 
+														DECK
+													LEFT JOIN 
+														CARD ON DECK.deck_id = CARD.deck_id
+													LEFT JOIN
+														PROGRESS ON CARD.card_id = PROGRESS.card_id
+													LEFT JOIN 
+														ACCOUNT ON PROGRESS.acc_id = ACCOUNT.acc_id
+													WHERE 
+															DECK.deck_id = ?
+                                                            AND ACCOUNT.token = ?
+													GROUP BY
+														DECK.deck_id`)
 	if err != nil {
 		return err
 	}
@@ -242,6 +331,80 @@ func (r *DeckRepositoryImpl) CheckOwnership(deckID int64, token string) bool {
 	row := r.CheckOwnerStmt.QueryRow(deckID, token)
 	_, err := scanDeck(row)
 	return err == nil
+}
+
+func (r *DeckRepositoryImpl) DeckDetailsSubscription(deckID int64, token string) (deck.Details, error) {
+	row := r.DeckDetailsOwnerStmt.QueryRow(deckID, token)
+
+	var details deck.Details
+	err := row.Scan(
+		&details.Title,
+		&details.Description,
+		&details.PicID,
+		&details.TotalProgress,
+		&details.CardsRevised,
+		&details.CardsRemaining,
+		&details.UpdatedAt,
+		&details.CreatedAt,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return deck.Details{}, erro.ErrDeckNotFound
+		}
+		return deck.Details{}, err
+	}
+
+	return details, nil
+}
+
+func (r *DeckRepositoryImpl) DeckDetailsOwner(deckID int64, token string) (deck.Details, error) {
+	row := r.DeckDetailsOwnerStmt.QueryRow(deckID, token)
+
+	var details deck.Details
+	err := row.Scan(
+		&details.Title,
+		&details.Description,
+		&details.PicID,
+		&details.Subscriptions,
+		&details.IsSubscribed,
+		&details.IsVisible,
+		&details.UpdatedAt,
+		&details.CreatedAt,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return deck.Details{}, erro.ErrDeckNotFound
+		}
+		return deck.Details{}, err
+	}
+
+	return details, nil
+}
+
+func (r *DeckRepositoryImpl) DeckDetailsShop(deckID int64) (deck.Details, error) {
+	row := r.DeckDetailsShopStmt.QueryRow(deckID)
+
+	var details deck.Details
+	err := row.Scan(
+		&details.Title,
+		&details.Description,
+		&details.PicID,
+		&details.Subscriptions,
+		&details.IsSubscribed,
+		&details.Cards,
+		&details.OwnerID,
+		&details.Owner,
+		&details.UpdatedAt,
+		&details.CreatedAt,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return deck.Details{}, erro.ErrDeckNotFound
+		}
+		return deck.Details{}, err
+	}
+
+	return details, nil
 }
 
 func updateDeckField(query *strings.Builder, args *[]any, field string, value any) {

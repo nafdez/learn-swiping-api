@@ -17,9 +17,10 @@ type DeckService interface {
 	OwnedDecks(req deck.ReadOwnedRequest, token string) ([]Deck, error)
 	Suscriptions(req deck.ReadRequest, token string) ([]Deck, error) // Should be only accepting ID but for the sake of consistency
 	Update(req deck.UpdateRequest, token string) error
-	Delete(req deck.DeleteRequest, token string) error
+	Delete(deckID int64, token string) error
 	AddDeckSubscription(deck.DeckSuscriptionRequest) error
 	RemoveDeckSubscription(deck.DeckSuscriptionRequest) error
+	DeckDetails(mode int8, deckID int64, token string) (deck.Details, error)
 }
 
 type DeckServiceImpl struct {
@@ -41,7 +42,7 @@ func (s *DeckServiceImpl) Create(request deck.CreateRequest) (int64, error) {
 	// TODO: Check if error and rollback
 	s.repository.AddDeckSubscription(request.Token, deckID)
 
-	return 0, nil
+	return deckID, nil
 }
 
 // Wondering what kind of mistakes I have made in my life to be doing this stuff
@@ -119,10 +120,10 @@ func (s *DeckServiceImpl) Update(request deck.UpdateRequest, token string) error
 	return erro.ErrInvalidToken
 }
 
-func (s *DeckServiceImpl) Delete(request deck.DeleteRequest, token string) error {
+func (s *DeckServiceImpl) Delete(deckID int64, token string) error {
 	// Doesn't work as intended. revisar
-	if s.repository.CheckOwnership(request.DeckID, token) {
-		return s.repository.Delete(request.DeckID)
+	if s.repository.CheckOwnership(deckID, token) {
+		return s.repository.Delete(deckID)
 	}
 	return erro.ErrInvalidToken
 }
@@ -133,4 +134,24 @@ func (s *DeckServiceImpl) AddDeckSubscription(request deck.DeckSuscriptionReques
 
 func (s *DeckServiceImpl) RemoveDeckSubscription(request deck.DeckSuscriptionRequest) error {
 	return s.repository.RemoveDeckSubscription(request.Token, request.DeckID)
+}
+
+func (s *DeckServiceImpl) DeckDetails(mode int8, deckID int64, token string) (deck.Details, error) {
+	var details deck.Details
+	var err error
+	switch mode {
+	case 0:
+		if token == "" {
+			return deck.Details{}, erro.ErrInvalidToken
+		}
+		details, err = s.repository.DeckDetailsSubscription(deckID, token)
+	case 1:
+		if token == "" {
+			return deck.Details{}, erro.ErrInvalidToken
+		}
+		details, err = s.repository.DeckDetailsOwner(deckID, token)
+	default:
+		details, err = s.repository.DeckDetailsShop(deckID)
+	}
+	return details, err
 }

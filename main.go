@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
@@ -15,6 +16,13 @@ func main() {
 	if err != nil {
 		log.Fatalln("Error loading .env file")
 	}
+
+    GIN_MODE := os.Getenv("GIN_MODE")
+    if len(GIN_MODE) == 0 {
+        GIN_MODE = "release"
+    }
+
+    gin.SetMode(GIN_MODE)
 
 	db, err := database.Connect()
 	if err != nil {
