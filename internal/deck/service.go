@@ -21,6 +21,11 @@ type DeckService interface {
 	AddDeckSubscription(deck.DeckSuscriptionRequest) error
 	RemoveDeckSubscription(deck.DeckSuscriptionRequest) error
 	DeckDetails(mode int8, deckID int64, token string) (deck.Details, error)
+
+	SaveRating(deckID int64, rating int8, token string) error
+	Rating(deckID int64, token string) (deck.Rating, error)
+	DeckRating(deckID int64) ([]deck.Rating, error)
+	DeleteRating(deckID int64, token string) error
 }
 
 type DeckServiceImpl struct {
@@ -154,4 +159,20 @@ func (s *DeckServiceImpl) DeckDetails(mode int8, deckID int64, token string) (de
 		details, err = s.repository.DeckDetailsShop(deckID)
 	}
 	return details, err
+}
+
+func (s *DeckServiceImpl) SaveRating(deckID int64, rating int8, token string) error {
+	return s.repository.SaveRating(deckID, rating, token)
+}
+
+func (s *DeckServiceImpl) Rating(deckID int64, token string) (deck.Rating, error) {
+	return s.repository.Rating(deckID, token)
+}
+
+func (s *DeckServiceImpl) DeckRating(deckID int64) ([]deck.Rating, error) {
+	return s.repository.DeckRating(deckID)
+}
+
+func (s *DeckServiceImpl) DeleteRating(deckID int64, token string) error {
+	return s.repository.DeleteRating(deckID, token)
 }

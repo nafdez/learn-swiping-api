@@ -22,6 +22,10 @@ type DeckController interface {
 	RemoveDeckSubscription(*gin.Context) // DELETE
 	DeckDetails(ctx *gin.Context)
 	DeckDetailsShop(ctx *gin.Context)
+
+	SaveRating(ctx *gin.Context)
+	Rating(ctx *gin.Context)
+	DeleteRating(ctx *gin.Context)
 }
 
 type DeckControllerImpl struct {
@@ -371,4 +375,104 @@ func (c *DeckControllerImpl) DeckDetailsShop(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, details)
+}
+
+// POST
+func (c *DeckControllerImpl) SaveRating(ctx *gin.Context) {
+	token := ctx.GetHeader("Token")
+	if token == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrInvalidToken.Error()})
+		return
+	}
+
+	deckID, err := strconv.Atoi(ctx.Param("deckID"))
+	if err != nil || deckID == 0 {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
+		return
+	}
+
+	rating, err := strconv.Atoi(ctx.Param("rating"))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
+		return
+	}
+
+	err = c.service.SaveRating(int64(deckID), int8(rating), token)
+	if err != nil {
+		if errors.Is(err, erro.ErrInvalidToken) {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{})
+}
+
+// GET
+func (c *DeckControllerImpl) Rating(ctx *gin.Context) {
+	deckID, err := strconv.Atoi(ctx.Param("deckID"))
+	if err != nil || deckID == 0 {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
+		return
+	}
+
+	if token := ctx.GetHeader("Token"); token != "" {
+		rating, err := c.service.Rating(int64(deckID), token)
+		if err != nil {
+			if errors.Is(err, erro.ErrRatingNotFound) {
+				ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+				return
+			}
+			if errors.Is(err, erro.ErrInvalidToken) {
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		ctx.JSON(http.StatusOK, rating)
+		return
+	}
+
+	ratings, err := c.service.DeckRating(int64(deckID))
+	if err != nil {
+		if errors.Is(err, erro.ErrRatingNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, ratings)
+}
+
+// GET
+func (c *DeckControllerImpl) DeleteRating(ctx *gin.Context) {
+	token := ctx.GetHeader("Token")
+	if token == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrInvalidToken.Error()})
+		return
+	}
+
+	deckID, err := strconv.Atoi(ctx.Param("deckID"))
+	if err != nil || deckID == 0 {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
+		return
+	}
+
+	err = c.service.DeleteRating(int64(deckID), token)
+	if err != nil {
+		if errors.Is(err, erro.ErrRatingNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		if errors.Is(err, erro.ErrInvalidToken) {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{})
 }

@@ -14,6 +14,8 @@ var (
 	ErrDeckNotFound = errors.New("deck not found")
 	ErrDeckExists   = errors.New("deck already exists")
 
+	ErrRatingNotFound = errors.New("rating not found")
+
 	ErrCardNotFound  = errors.New("card not found")
 	ErrWrongNotFound = errors.New("wrong answer not found")
 	ErrCardExists    = errors.New("card already exists")

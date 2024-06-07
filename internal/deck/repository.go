@@ -27,6 +27,11 @@ type DeckRepository interface {
 	DeckDetailsSubscription(deckID int64, token string) (deck.Details, error)
 	DeckDetailsOwner(deckID int64, token string) (deck.Details, error)
 	DeckDetailsShop(deckID int64) (deck.Details, error)
+
+	SaveRating(deckID int64, rating int8, token string) error
+	Rating(deckID int64, token string) (deck.Rating, error)
+	DeckRating(deckID int64) ([]deck.Rating, error)
+	DeleteRating(deckID int64, token string) error
 }
 
 type DeckRepositoryImpl struct {
@@ -43,6 +48,11 @@ type DeckRepositoryImpl struct {
 	DeckDetailsOwnerStmt *sql.Stmt
 	DeckDetailsShopStmt  *sql.Stmt
 	DeckDetailsSubsStmt  *sql.Stmt
+
+	SaveRatingStmt   *sql.Stmt
+	RatingStmt       *sql.Stmt
+	DeckRatingStmt   *sql.Stmt
+	DeleteRatingStmt *sql.Stmt
 }
 
 func NewDeckRepository(db *sql.DB) *DeckRepositoryImpl {
@@ -192,6 +202,35 @@ func (repo *DeckRepositoryImpl) InitStatements() error {
 														DECK.deck_id`)
 	if err != nil {
 		return err
+	}
+
+	repo.SaveRatingStmt, err = repo.db.Prepare(`INSERT INTO RATING (deck_id, acc_id, rating)
+													SELECT ?, acc_id, ? FROM ACCOUNT WHERE token = ?
+												ON DUPLICATE KEY UPDATE
+													rating = VALUES(rating)`)
+	if err != nil {
+		return err
+	}
+
+	repo.RatingStmt, err = repo.db.Prepare(`SELECT rating FROM RATING
+											LEFT JOIN
+												ACCOUNT ON RATING.acc_id = ACCOUNT.acc_id
+											WHERE
+												deck_id = ? && ACCOUNT.token = ?`)
+	if err != nil {
+		return err
+	}
+
+	repo.DeckRatingStmt, err = repo.db.Prepare(`SELECT COUNT(rating_id) AS rating_count, COALESCE(AVG(rating), 0) AS avg_rating FROM RATING WHERE deck_id = ?`)
+	if err != nil {
+		return err
+	}
+
+	repo.DeleteRatingStmt, err = repo.db.Prepare(`DELETE RATING FROM RATING
+													LEFT JOIN ACCOUNT ON RATING.acc_id = ACCOUNT.acc_id
+													WHERE deck_id = ? AND ACCOUNT.token = ?`)
+	if err != nil {
+		return nil
 	}
 
 	return nil
@@ -405,6 +444,79 @@ func (r *DeckRepositoryImpl) DeckDetailsShop(deckID int64) (deck.Details, error)
 	}
 
 	return details, nil
+}
+
+func (r *DeckRepositoryImpl) SaveRating(deckID int64, rating int8, token string) error {
+	_, err := r.SaveRatingStmt.Exec(deckID, rating, token)
+	if err != nil {
+		if err.(*mysql.MySQLError).Number == 1048 {
+			return erro.ErrInvalidToken
+		}
+		return err
+	}
+	return nil
+}
+
+func (r *DeckRepositoryImpl) Rating(deckID int64, token string) (deck.Rating, error) {
+	row := r.RatingStmt.QueryRow(deckID, token)
+
+	var rating deck.Rating
+	err := row.Scan(
+		&rating.Rating,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return deck.Rating{}, erro.ErrRatingNotFound
+		}
+		return deck.Rating{}, err
+	}
+
+	return rating, nil
+}
+
+func (r *DeckRepositoryImpl) DeckRating(deckID int64) ([]deck.Rating, error) {
+	rows, err := r.DeckRatingStmt.Query(deckID)
+	if err != nil {
+		return []deck.Rating{}, err
+	}
+	defer rows.Close()
+
+	var ratings []deck.Rating
+	var rating deck.Rating
+	for rows.Next() {
+		err := rows.Scan(
+			&rating.RatingCount,
+			&rating.AvgRating,
+		)
+		if err != nil {
+			return []deck.Rating{}, err
+		}
+		ratings = append(ratings, rating)
+	}
+
+	if len(ratings) == 0 {
+		return []deck.Rating{}, erro.ErrDeckNotFound
+	}
+
+	return ratings, nil
+}
+
+func (r *DeckRepositoryImpl) DeleteRating(deckID int64, token string) error {
+	result, err := r.DeleteRatingStmt.Exec(deckID, token)
+	if err != nil {
+		return err
+	}
+
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if affected == 0 {
+		return erro.ErrRatingNotFound
+	}
+
+	return nil
 }
 
 func updateDeckField(query *strings.Builder, args *[]any, field string, value any) {
