@@ -3,6 +3,7 @@ package card
 type Card struct {
 	CardID   int64         `json:"card_id"`
 	DeckID   int64         `json:"deck_id"`
+	Title    string        `json:"title"`
 	Front    string        `json:"front"`
 	Back     string        `json:"back"`
 	Question string        `json:"question"`

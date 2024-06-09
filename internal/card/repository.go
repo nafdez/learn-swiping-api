@@ -79,7 +79,7 @@ func (r *CardRepositoryImpl) Create(card Card) (int64, error) {
 	}
 
 	// Cannot use globally prepared statements here because of the transaction
-	cardStmt, err := tx.Prepare("INSERT INTO CARD (deck_id, front, back, question, answer) VALUES (?, ?, ?, ?, ?)")
+	cardStmt, err := tx.Prepare("INSERT INTO CARD (deck_id, title, front, back, question, answer) VALUES (?, ?, ?, ?, ?, ?)")
 	if err != nil {
 		return 0, err
 	}
@@ -93,7 +93,7 @@ func (r *CardRepositoryImpl) Create(card Card) (int64, error) {
 	defer wrongStmt.Close()
 
 	// Insert Card
-	result, err := cardStmt.Exec(card.DeckID, card.Front, card.Back, card.Question, card.Answer)
+	result, err := cardStmt.Exec(card.DeckID, card.Title, card.Front, card.Back, card.Question, card.Answer)
 	if err != nil {
 		tx.Rollback()
 		if err.(*mysql.MySQLError).Number == 1452 {
@@ -136,6 +136,7 @@ func (r *CardRepositoryImpl) ById(cardID int64, deckID int64) (Card, error) {
 	err := row.Scan(
 		&card.CardID,
 		&card.DeckID,
+		&card.Title,
 		&card.Front,
 		&card.Back,
 		&card.Question,
@@ -164,6 +165,7 @@ func (r *CardRepositoryImpl) ByDeckId(id int64) ([]Card, error) {
 		err := rows.Scan(
 			&card.CardID,
 			&card.DeckID,
+			&card.Title,
 			&card.Front,
 			&card.Back,
 			&card.Question,
@@ -187,6 +189,7 @@ func (r *CardRepositoryImpl) Update(card Card) error {
 	var args []any
 	query.WriteString("UPDATE CARD SET")
 
+	updateCardField(&query, &args, "title", card.Title)
 	updateCardField(&query, &args, "front", card.Front)
 	updateCardField(&query, &args, "back", card.Back)
 	updateCardField(&query, &args, "question", card.Question)

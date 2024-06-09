@@ -130,6 +130,8 @@ func (repo *DeckRepositoryImpl) InitStatements() error {
 														COUNT(ACC_DECK.deck_id) AS subscriptions,
                                                         COUNT(adSubscribed.deck_id) As is_subscribed,
     													DECK.visible,
+														DECK.acc_id,
+														ACCOUNT.username,
     													DECK.updated_at,
     													DECK.created_at
 													FROM 
@@ -185,6 +187,7 @@ func (repo *DeckRepositoryImpl) InitStatements() error {
 														coalesce((count(PROGRESS.progress_id) / COUNT(CARD.card_id) * 100), 0) AS total_progress,
 														COUNT(PROGRESS.progress_id) AS cards_revised,
 														coalesce((count(CARD.card_id) - count(PROGRESS.progress_id)), 0) AS cards_remaining,
+														DECK.acc_id,
 														DECK.updated_at,
 														DECK.created_at
 													FROM 
@@ -193,13 +196,17 @@ func (repo *DeckRepositoryImpl) InitStatements() error {
 														CARD ON DECK.deck_id = CARD.deck_id
 													LEFT JOIN
 														PROGRESS ON CARD.card_id = PROGRESS.card_id
+													LEFT JOIN
+														ACCOUNT a ON PROGRESS.acc_id = a.acc_id
+													LEFT JOIN
+														ACC_DECK ON DECK.deck_id = ACC_DECK.deck_id
 													LEFT JOIN 
-														ACCOUNT ON PROGRESS.acc_id = ACCOUNT.acc_id
+														ACCOUNT ON ACC_DECK.acc_id = ACCOUNT.acc_id
 													WHERE 
 															DECK.deck_id = ?
                                                             AND ACCOUNT.token = ?
 													GROUP BY
-														DECK.deck_id`)
+														DECK.deck_id;`)
 	if err != nil {
 		return err
 	}
@@ -373,7 +380,7 @@ func (r *DeckRepositoryImpl) CheckOwnership(deckID int64, token string) bool {
 }
 
 func (r *DeckRepositoryImpl) DeckDetailsSubscription(deckID int64, token string) (deck.Details, error) {
-	row := r.DeckDetailsOwnerStmt.QueryRow(deckID, token)
+	row := r.DeckDetailsSubsStmt.QueryRow(deckID, token)
 
 	var details deck.Details
 	err := row.Scan(
@@ -383,6 +390,7 @@ func (r *DeckRepositoryImpl) DeckDetailsSubscription(deckID int64, token string)
 		&details.TotalProgress,
 		&details.CardsRevised,
 		&details.CardsRemaining,
+		&details.OwnerID,
 		&details.UpdatedAt,
 		&details.CreatedAt,
 	)
@@ -407,6 +415,8 @@ func (r *DeckRepositoryImpl) DeckDetailsOwner(deckID int64, token string) (deck.
 		&details.Subscriptions,
 		&details.IsSubscribed,
 		&details.IsVisible,
+		&details.OwnerID,
+		&details.Owner,
 		&details.UpdatedAt,
 		&details.CreatedAt,
 	)

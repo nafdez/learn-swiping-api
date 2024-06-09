@@ -24,7 +24,7 @@ func NewCardService(repository CardRepository) CardService {
 }
 
 func (s *CardServiceImpl) Create(request card.CreateRequest) (int64, error) {
-	if len(request.Wrong) != 3 { // All cards should have four answers, one OK three bad
+	if request.Title == "" || len(request.Wrong) != 3 { // All cards should have four answers, one OK three bad
 		return 0, erro.ErrBadField
 	}
 
@@ -36,6 +36,7 @@ func (s *CardServiceImpl) Create(request card.CreateRequest) (int64, error) {
 
 	card := Card{
 		DeckID:   request.DeckID,
+		Title:    request.Title,
 		Front:    request.Front,
 		Back:     request.Back,
 		Question: request.Question,
@@ -67,10 +68,11 @@ func (s *CardServiceImpl) Cards(deckID int64) ([]Card, error) {
 }
 
 func (s *CardServiceImpl) Update(request card.UpdateRequest) error {
-	if request.Front != "" || request.Back != "" || request.Question != "" || request.Answer != "" {
+	if request.Title != "" || request.Front != "" || request.Back != "" || request.Question != "" || request.Answer != "" {
 		card := Card{
 			CardID:   request.CardID,
 			DeckID:   request.DeckID,
+			Title:    request.Title,
 			Front:    request.Front,
 			Back:     request.Back,
 			Question: request.Question,
