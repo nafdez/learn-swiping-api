@@ -27,7 +27,7 @@ type AccountService interface {
 	account(account.PublicRequest) (account.Public, error)
 	Update(account.UpdateRequest) error
 	Delete(token string) error
-	updateToken(old string) (string, error)
+	updateToken(account Account) (string, error)
 	generateToken() (string, error)
 	hashPassword(password string) (string, error)
 	checkPasswordHash(password, hash string) bool
@@ -85,7 +85,7 @@ func (s *AccountServiceImpl) Login(request account.LoginRequest) (Account, error
 
 	if s.checkPasswordHash(request.Password, account.Password) {
 		if time.Now().After(account.TokenExpires) {
-			token, err := s.updateToken(account.Token)
+			token, err := s.updateToken(account)
 			if err != nil {
 				return Account{}, err
 			}
@@ -118,8 +118,12 @@ func (s *AccountServiceImpl) Token(token string) (Account, error) {
 }
 
 func (s *AccountServiceImpl) Logout(token string) error {
+	account, err := s.repository.ByToken(token)
+	if err != nil {
+		return err
+	}
 	// Updating token and not returning to account to invalidate the previous token
-	_, err := s.updateToken(token)
+	_, err = s.updateToken(account)
 	return err
 }
 
@@ -228,11 +232,11 @@ func (s *AccountServiceImpl) Delete(token string) error {
 	return s.repository.Delete(token)
 }
 
-func (s *AccountServiceImpl) updateToken(old string) (string, error) {
-	account, err := s.repository.ByToken(old)
-	if err != nil {
-		return "", err
-	}
+func (s *AccountServiceImpl) updateToken(account Account) (string, error) {
+	// account, err := s.repository.ByToken(old)
+	// if err != nil {
+	// 	return "", err
+	// }
 
 	new, err := s.generateToken()
 	if err != nil {
