@@ -6,6 +6,7 @@ import (
 	"learn-swiping-api/erro"
 	progress "learn-swiping-api/internal/progress/dto"
 	"log"
+	"reflect"
 	"strings"
 
 	"github.com/go-sql-driver/mysql"
@@ -58,7 +59,6 @@ func (r *ProgressRepositoryImpl) InitStatements() error {
 }
 
 func (r *ProgressRepositoryImpl) Create(req progress.AccessRequest) (int64, error) {
-	log.Println(req.Token, req.CardID)
 	result, err := r.CreateStmt.Exec(req.Token, req.CardID)
 	if err != nil {
 		if err.(*mysql.MySQLError).Number == 1452 {
@@ -108,6 +108,8 @@ func (r *ProgressRepositoryImpl) Update(req progress.UpdateRequest) error {
 	var args []any
 	query.WriteString("UPDATE PROGRESS SET")
 
+	updateProgressField(&query, &args, "ease", req.Ease)
+	updateProgressField(&query, &args, "`interval`", req.Interval)
 	updateProgressField(&query, &args, "priority", req.Priority)
 	updateProgressField(&query, &args, "days_hidden", req.DaysHidden)
 	updateProgressField(&query, &args, "watch_count", req.WatchCount)
@@ -115,6 +117,7 @@ func (r *ProgressRepositoryImpl) Update(req progress.UpdateRequest) error {
 	updateProgressField(&query, &args, "days_hidden_exam", req.DaysHiddenExam)
 	updateProgressField(&query, &args, "answer_count", req.AnswerCount)
 	updateProgressField(&query, &args, "correct_count", req.CorrectCount)
+	updateProgressField(&query, &args, "is_relearning", req.IsRelearning)
 	updateProgressField(&query, &args, "is_buried", req.IsBuried)
 	// TODO: last update, creation date
 
@@ -185,5 +188,11 @@ func updateProgressField(query *strings.Builder, args *[]any, field string, valu
 	}
 
 	query.WriteString(fmt.Sprintf(" %s = ?", field))
+
+	if reflect.ValueOf(value).Kind() == reflect.Ptr {
+		*args = append(*args, reflect.ValueOf(value).Elem().Interface())
+		return
+	}
+
 	*args = append(*args, value)
 }

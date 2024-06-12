@@ -11,6 +11,7 @@ type CardService interface {
 	Create(card.CreateRequest) (int64, error)
 	Card(cardID int64, deckID int64) (Card, error)
 	Cards(deckID int64) ([]Card, error)
+	ByProgress(token string, deckID int64) ([]Card, error)
 	Update(card.UpdateRequest) error
 	Delete(cardID int64, deckID int64) error
 }
@@ -65,6 +66,25 @@ func (s *CardServiceImpl) Cards(deckID int64) ([]Card, error) {
 	// Wrong answers should only be needed when viewing one
 	// card at most
 	return s.repository.ByDeckId(deckID)
+}
+
+func (s *CardServiceImpl) ByProgress(token string, deckID int64) ([]Card, error) {
+	// Wrong answers should only be needed when viewing one
+	// card at most
+	cards, err := s.repository.ByProgress(token, deckID)
+	if err != nil {
+		return []Card{}, err
+	}
+
+	// TODO: Do this in the repository query
+	for i := 0; i < len(cards); i++ {
+		cards[i].Wrong, err = s.repository.WrongByCardId(cards[i].CardID)
+		if err != nil {
+			return []Card{}, err
+		}
+	}
+
+	return cards, nil
 }
 
 func (s *CardServiceImpl) Update(request card.UpdateRequest) error {

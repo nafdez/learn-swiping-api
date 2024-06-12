@@ -1,6 +1,7 @@
 package progress
 
 import (
+	"errors"
 	"learn-swiping-api/erro"
 	progress "learn-swiping-api/internal/progress/dto"
 )
@@ -30,11 +31,27 @@ func (s *ProgressServiceImpl) Progress(req progress.AccessRequest) (Progress, er
 }
 
 func (s *ProgressServiceImpl) Update(req progress.UpdateRequest) error {
-	if req.Priority == nil && req.DaysHidden == nil && req.WatchCount == nil && req.PriorityExam == nil && req.DaysHiddenExam == nil && req.AnswerCount == nil && req.CorrectCount == nil && req.IsBuried == nil {
+	if req.Ease == nil && req.Interval == nil && req.Priority == nil && req.DaysHidden == nil && req.WatchCount == nil && req.PriorityExam == nil && req.DaysHiddenExam == nil && req.AnswerCount == nil && req.CorrectCount == nil && req.IsRelearning == nil && req.IsBuried == nil {
 		return erro.ErrBadField
 	}
 
-	return s.repository.Update(req)
+	accReq := progress.AccessRequest{Token: req.Token, CardID: req.CardID}
+	_, err := s.repository.Progress(accReq)
+	if err != nil {
+		if errors.Is(err, erro.ErrProgressNotFound) {
+			// If progress doesn't exist, then creates and later updates it.
+			err = s.Create(accReq)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	err = s.repository.Update(req)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *ProgressServiceImpl) Delete(req progress.AccessRequest) error {

@@ -14,6 +14,7 @@ type CardRepository interface {
 	Create(Card) (int64, error)
 	ById(cardID int64, deckID int64) (Card, error)
 	ByDeckId(id int64) ([]Card, error)
+	ByProgress(token string, deckID int64) ([]Card, error)
 	Update(card Card) error
 	Delete(cardID int64, deckID int64) error
 	// CreateWrong(wrong WrongAnswer) (int64, error)
@@ -26,6 +27,7 @@ type CardRepositoryImpl struct {
 	db              *sql.DB
 	ByIdStmt        *sql.Stmt
 	ByDeckIdStmt    *sql.Stmt
+	ByProgressStmt  *sql.Stmt
 	DeleteStmt      *sql.Stmt
 	CreateWrongStmt *sql.Stmt
 	WrongByIdStmt   *sql.Stmt
@@ -49,6 +51,18 @@ func (repo *CardRepositoryImpl) InitStatements() error {
 	}
 
 	repo.ByDeckIdStmt, err = repo.db.Prepare("SELECT * FROM CARD WHERE deck_id = ?")
+	if err != nil {
+		return err
+	}
+
+	repo.ByProgressStmt, err = repo.db.Prepare(`SELECT c.*
+												FROM CARD c
+												LEFT JOIN PROGRESS p ON c.card_id = p.card_id
+												LEFT JOIN ACCOUNT a ON p.acc_id = a.acc_id
+												WHERE ((p.days_hidden <= 0 AND p.is_buried = false)
+   												OR p.card_id IS NULL) 
+												AND c.deck_id = ? 
+												AND a.token = ?`)
 	if err != nil {
 		return err
 	}
@@ -155,6 +169,38 @@ func (r *CardRepositoryImpl) ById(cardID int64, deckID int64) (Card, error) {
 func (r *CardRepositoryImpl) ByDeckId(id int64) ([]Card, error) {
 	var cards []Card
 	rows, err := r.ByDeckIdStmt.Query(id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var card Card
+	for rows.Next() {
+		err := rows.Scan(
+			&card.CardID,
+			&card.DeckID,
+			&card.Title,
+			&card.Front,
+			&card.Back,
+			&card.Question,
+			&card.Answer,
+		)
+		if err != nil {
+			return cards, err
+		}
+		cards = append(cards, card)
+	}
+
+	if len(cards) == 0 {
+		return nil, erro.ErrCardNotFound
+	}
+
+	return cards, nil
+}
+
+func (r *CardRepositoryImpl) ByProgress(token string, deckID int64) ([]Card, error) {
+	var cards []Card
+	rows, err := r.ByProgressStmt.Query(deckID, token)
 	if err != nil {
 		return nil, err
 	}

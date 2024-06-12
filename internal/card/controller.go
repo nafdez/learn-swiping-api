@@ -11,11 +11,12 @@ import (
 )
 
 type CardController interface {
-	Create(*gin.Context) // POST
-	Card(*gin.Context)   // GET
-	Cards(*gin.Context)  // GET
-	Update(*gin.Context) // PUT
-	Delete(*gin.Context) // DELETE
+	Create(*gin.Context)  // POST
+	Card(*gin.Context)    // GET
+	Cards(*gin.Context)   // GET
+	Pending(*gin.Context) // GET - ByProgress
+	Update(*gin.Context)  // PUT
+	Delete(*gin.Context)  // DELETE
 }
 
 type CardControllerImpl struct {
@@ -85,6 +86,12 @@ func (c *CardControllerImpl) Card(ctx *gin.Context) {
 // Retrieves a list of cards based on it's deckID
 // Method: GET
 func (c *CardControllerImpl) Cards(ctx *gin.Context) {
+	token := ctx.Param("Token")
+	if token != "" {
+		c.Pending(ctx) // Ugly asf, but a hurry is a hurry
+		return
+	}
+
 	deckID, err := strconv.Atoi(ctx.Param("deckID"))
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
@@ -92,6 +99,34 @@ func (c *CardControllerImpl) Cards(ctx *gin.Context) {
 	}
 
 	cards, err := c.service.Cards(int64(deckID))
+	if err != nil {
+		if errors.Is(err, erro.ErrCardNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, cards)
+}
+
+// Retrieves a list of cards based on it's deckID and it's progress
+// Method: GET
+func (c *CardControllerImpl) Pending(ctx *gin.Context) {
+	token := ctx.Param("Token")
+	if token == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrInvalidToken.Error()})
+		return
+	}
+
+	deckID, err := strconv.Atoi(ctx.Param("deckID"))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
+		return
+	}
+
+	cards, err := c.service.ByProgress(token, int64(deckID))
 	if err != nil {
 		if errors.Is(err, erro.ErrCardNotFound) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
