@@ -84,12 +84,15 @@ func (r *ProgressRepositoryImpl) Progress(req progress.AccessRequest) (Progress,
 		&progress.AccID,
 		&progress.CardID,
 		&progress.Priority,
+		&progress.Ease,
+		&progress.Interval,
 		&progress.DaysHidden,
 		&progress.WatchCount,
 		&progress.PriorityExam,
 		&progress.DaysHiddenExam,
 		&progress.AnswerCount,
 		&progress.CorrectCount,
+		&progress.IsRelearning,
 		&progress.IsBuried,
 	)
 	if err != nil {
@@ -148,30 +151,26 @@ func (r *ProgressRepositoryImpl) Update(req progress.UpdateRequest) error {
 
 	appendToStringMap(query, "insertColumns", ")")
 	appendToStringMap(query, "insertValues", " FROM ACCOUNT WHERE token = ?")
+	args = append(args, req.Token)
 
 	strQuery := fmt.Sprintf("%s %s %s", query["insertColumns"], query["insertValues"], query["onDuplicate"])
-	log.Println(strQuery)
+	// log.Println(strQuery)
+
+	// for _, arg := range args {
+	// log.Print(arg)
+	// }
 
 	stmt, err := r.db.Prepare(strQuery)
 	if err != nil {
 		return err
 	}
 
-	result, err := stmt.Exec(args...)
+	_, err = stmt.Exec(args...)
 	if err != nil {
 		if err.(*mysql.MySQLError).Number == 1048 {
 			return erro.ErrInvalidToken
 		}
 		return err
-	}
-
-	affected, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-
-	if affected == 0 {
-		return erro.ErrProgressNotFound
 	}
 
 	return nil
@@ -197,14 +196,13 @@ func upsertProgressField(query map[string]string, args *[]any, field string, val
 	}
 
 	appendToStringMap(query, "insertColumns", fmt.Sprintf(" %s", field))
-
+	appendToStringMap(query, "onDuplicate", fmt.Sprintf(" %s = VALUES(%s)", field, field))
 	if field == "acc_id" {
 		appendToStringMap(query, "insertValues", " acc_id")
+		return
 	} else {
 		appendToStringMap(query, "insertValues", " ?")
 	}
-
-	appendToStringMap(query, "onDuplicate", fmt.Sprintf(" %s = VALUES(%s)", field, field))
 
 	if reflect.ValueOf(value).Kind() == reflect.Ptr {
 		*args = append(*args, reflect.ValueOf(value).Elem().Interface())
