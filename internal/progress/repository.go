@@ -7,7 +7,6 @@ import (
 	progress "learn-swiping-api/internal/progress/dto"
 	"log"
 	"reflect"
-	"strings"
 
 	"github.com/go-sql-driver/mysql"
 )
@@ -103,28 +102,57 @@ func (r *ProgressRepositoryImpl) Progress(req progress.AccessRequest) (Progress,
 	return progress, nil
 }
 
-func (r *ProgressRepositoryImpl) Update(req progress.UpdateRequest) error {
-	var query strings.Builder
-	var args []any
-	query.WriteString("UPDATE PROGRESS SET")
+func (r *ProgressRepositoryImpl) Delete(req progress.AccessRequest) error {
+	result, err := r.DeleteStmt.Exec(req.Token, req.CardID)
+	if err != nil {
+		if err.(*mysql.MySQLError).Number == 1048 {
+			return erro.ErrInvalidToken
+		}
+		return err
+	}
 
-	updateProgressField(&query, &args, "ease", req.Ease)
-	updateProgressField(&query, &args, "`interval`", req.Interval)
-	updateProgressField(&query, &args, "priority", req.Priority)
-	updateProgressField(&query, &args, "days_hidden", req.DaysHidden)
-	updateProgressField(&query, &args, "watch_count", req.WatchCount)
-	updateProgressField(&query, &args, "priority_exam", req.PriorityExam)
-	updateProgressField(&query, &args, "days_hidden_exam", req.DaysHiddenExam)
-	updateProgressField(&query, &args, "answer_count", req.AnswerCount)
-	updateProgressField(&query, &args, "correct_count", req.CorrectCount)
-	updateProgressField(&query, &args, "is_relearning", req.IsRelearning)
-	updateProgressField(&query, &args, "is_buried", req.IsBuried)
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if affected == 0 {
+		return erro.ErrProgressNotFound
+	}
+
+	return nil
+}
+
+func (r *ProgressRepositoryImpl) Update(req progress.UpdateRequest) error {
+	query := make(map[string]string)
+	var args []any
+
+	query["insertColumns"] = "INSERT INTO PROGRESS ("
+	query["insertValues"] = "SELECT"
+	query["onDuplicate"] = "ON DUPLICATE KEY UPDATE"
+
+	upsertProgressField(query, &args, "acc_id", req.Token)
+	upsertProgressField(query, &args, "card_id", req.CardID)
+	upsertProgressField(query, &args, "ease", req.Ease)
+	upsertProgressField(query, &args, "`interval`", req.Interval)
+	upsertProgressField(query, &args, "priority", req.Priority)
+	upsertProgressField(query, &args, "days_hidden", req.DaysHidden)
+	upsertProgressField(query, &args, "watch_count", req.WatchCount)
+	upsertProgressField(query, &args, "priority_exam", req.PriorityExam)
+	upsertProgressField(query, &args, "days_hidden_exam", req.DaysHiddenExam)
+	upsertProgressField(query, &args, "answer_count", req.AnswerCount)
+	upsertProgressField(query, &args, "correct_count", req.CorrectCount)
+	upsertProgressField(query, &args, "is_relearning", req.IsRelearning)
+	upsertProgressField(query, &args, "is_buried", req.IsBuried)
 	// TODO: last update, creation date
 
-	args = append(args, req.Token, req.CardID)
-	query.WriteString(" WHERE acc_id = (SELECT acc_id FROM ACCOUNT WHERE token = ?) AND card_id = ?")
+	appendToStringMap(query, "insertColumns", ")")
+	appendToStringMap(query, "insertValues", " FROM ACCOUNT WHERE token = ?")
 
-	stmt, err := r.db.Prepare(query.String())
+	strQuery := fmt.Sprintf("%s %s %s", query["insertColumns"], query["insertValues"], query["onDuplicate"])
+	log.Println(strQuery)
+
+	stmt, err := r.db.Prepare(strQuery)
 	if err != nil {
 		return err
 	}
@@ -149,28 +177,7 @@ func (r *ProgressRepositoryImpl) Update(req progress.UpdateRequest) error {
 	return nil
 }
 
-func (r *ProgressRepositoryImpl) Delete(req progress.AccessRequest) error {
-	result, err := r.DeleteStmt.Exec(req.Token, req.CardID)
-	if err != nil {
-		if err.(*mysql.MySQLError).Number == 1048 {
-			return erro.ErrInvalidToken
-		}
-		return err
-	}
-
-	affected, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-
-	if affected == 0 {
-		return erro.ErrProgressNotFound
-	}
-
-	return nil
-}
-
-func updateProgressField(query *strings.Builder, args *[]any, field string, value any) {
+func upsertProgressField(query map[string]string, args *[]any, field string, value any) {
 	if b, ok := value.(*bool); ok {
 		if b == nil {
 			return
@@ -183,11 +190,21 @@ func updateProgressField(query *strings.Builder, args *[]any, field string, valu
 		return
 	}
 
-	if query.String() != "UPDATE PROGRESS SET" {
-		query.WriteString(",")
+	if query["insertColumns"] != "INSERT INTO PROGRESS (" {
+		appendToStringMap(query, "insertColumns", ",")
+		appendToStringMap(query, "insertValues", ",")
+		appendToStringMap(query, "onDuplicate", ",")
 	}
 
-	query.WriteString(fmt.Sprintf(" %s = ?", field))
+	appendToStringMap(query, "insertColumns", fmt.Sprintf(" %s", field))
+
+	if field == "acc_id" {
+		appendToStringMap(query, "insertValues", " acc_id")
+	} else {
+		appendToStringMap(query, "insertValues", " ?")
+	}
+
+	appendToStringMap(query, "onDuplicate", fmt.Sprintf(" %s = VALUES(%s)", field, field))
 
 	if reflect.ValueOf(value).Kind() == reflect.Ptr {
 		*args = append(*args, reflect.ValueOf(value).Elem().Interface())
@@ -196,3 +213,80 @@ func updateProgressField(query *strings.Builder, args *[]any, field string, valu
 
 	*args = append(*args, value)
 }
+
+func appendToStringMap(m map[string]string, key string, val string) {
+	m[key] = m[key] + val
+}
+
+// func (r *ProgressRepositoryImpl) Update(req progress.UpdateRequest) error {
+// 	var query strings.Builder
+// 	var args []any
+// 	query.WriteString("UPDATE PROGRESS SET")
+
+// 	updateProgressField(&query, &args, "ease", req.Ease)
+// 	updateProgressField(&query, &args, "`interval`", req.Interval)
+// 	updateProgressField(&query, &args, "priority", req.Priority)
+// 	updateProgressField(&query, &args, "days_hidden", req.DaysHidden)
+// 	updateProgressField(&query, &args, "watch_count", req.WatchCount)
+// 	updateProgressField(&query, &args, "priority_exam", req.PriorityExam)
+// 	updateProgressField(&query, &args, "days_hidden_exam", req.DaysHiddenExam)
+// 	updateProgressField(&query, &args, "answer_count", req.AnswerCount)
+// 	updateProgressField(&query, &args, "correct_count", req.CorrectCount)
+// 	updateProgressField(&query, &args, "is_relearning", req.IsRelearning)
+// 	updateProgressField(&query, &args, "is_buried", req.IsBuried)
+// 	// TODO: last update, creation date
+
+// 	args = append(args, req.Token, req.CardID)
+// 	query.WriteString(" WHERE acc_id = (SELECT acc_id FROM ACCOUNT WHERE token = ?) AND card_id = ?")
+
+// 	stmt, err := r.db.Prepare(query.String())
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	result, err := stmt.Exec(args...)
+// 	if err != nil {
+// 		if err.(*mysql.MySQLError).Number == 1048 {
+// 			return erro.ErrInvalidToken
+// 		}
+// 		return err
+// 	}
+
+// 	affected, err := result.RowsAffected()
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	if affected == 0 {
+// 		return erro.ErrProgressNotFound
+// 	}
+
+// 	return nil
+// }
+
+// func updateProgressField(query *strings.Builder, args *[]any, field string, value any) {
+// 	if b, ok := value.(*bool); ok {
+// 		if b == nil {
+// 			return
+// 		}
+// 	} else if i, ok := value.(*int); ok {
+// 		if i == nil {
+// 			return
+// 		}
+// 	} else if value == "" || value == nil {
+// 		return
+// 	}
+
+// 	if query.String() != "UPDATE PROGRESS SET" {
+// 		query.WriteString(",")
+// 	}
+
+// 	query.WriteString(fmt.Sprintf(" %s = ?", field))
+
+// 	if reflect.ValueOf(value).Kind() == reflect.Ptr {
+// 		*args = append(*args, reflect.ValueOf(value).Elem().Interface())
+// 		return
+// 	}
+
+// 	*args = append(*args, value)
+// }

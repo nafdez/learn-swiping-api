@@ -1,7 +1,6 @@
 package progress
 
 import (
-	"errors"
 	"learn-swiping-api/erro"
 	progress "learn-swiping-api/internal/progress/dto"
 )
@@ -35,23 +34,7 @@ func (s *ProgressServiceImpl) Update(req progress.UpdateRequest) error {
 		return erro.ErrBadField
 	}
 
-	accReq := progress.AccessRequest{Token: req.Token, CardID: req.CardID}
-	_, err := s.repository.Progress(accReq)
-	if err != nil {
-		if errors.Is(err, erro.ErrProgressNotFound) {
-			// If progress doesn't exist, then creates and later updates it.
-			err = s.Create(accReq)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	err = s.repository.Update(req)
-	if err != nil {
-		return err
-	}
-	return nil
+	return s.repository.Update(req)
 }
 
 func (s *ProgressServiceImpl) Delete(req progress.AccessRequest) error {
