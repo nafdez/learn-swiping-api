@@ -69,6 +69,7 @@ func NewRouter(init *config.Initialization) *gin.Engine {
 	shopGroup := router.Group("shop")
 	{
 		shopGroup.GET(":deckID", init.DeckCtrl.DeckDetailsShop)
+		shopGroup.GET("top/:quantity", init.DeckCtrl.ShopTopN)
 	}
 
 	progressGroup := router.Group("progress")

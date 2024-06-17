@@ -20,6 +20,7 @@ type DeckController interface {
 	Delete(*gin.Context)                 // DELETE
 	AddDeckSubscription(*gin.Context)    // POST
 	RemoveDeckSubscription(*gin.Context) // DELETE
+	ShopTopN(*gin.Context)
 	DeckDetails(ctx *gin.Context)
 	DeckDetailsShop(ctx *gin.Context)
 
@@ -313,6 +314,35 @@ func (c *DeckControllerImpl) RemoveDeckSubscription(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{})
+}
+
+func (c *DeckControllerImpl) ShopTopN(ctx *gin.Context) {
+	token := ctx.GetHeader("Token")
+	if token == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrInvalidToken.Error()})
+		return
+	}
+
+	quantity, err := strconv.Atoi(ctx.Param("quantity"))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": erro.ErrBadField.Error()})
+		return
+	}
+
+	var decks []Deck
+	if decks, err = c.service.ShopTopN(token, int32(quantity)); err != nil {
+		if errors.Is(err, erro.ErrBadField) {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		if errors.Is(err, erro.ErrDeckNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, decks)
 }
 
 func (c *DeckControllerImpl) DeckDetails(ctx *gin.Context) {

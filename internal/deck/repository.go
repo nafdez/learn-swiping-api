@@ -24,6 +24,8 @@ type DeckRepository interface {
 	RemoveDeckSubscription(token string, deckId int64) error
 	CheckOwnership(deckID int64, token string) bool
 
+	ShopTopN(token string, quantity int32) ([]Deck, error)
+
 	DeckDetailsSubscription(deckID int64, token string) (deck.Details, error)
 	DeckDetailsOwner(deckID int64, token string) (deck.Details, error)
 	DeckDetailsShop(deckID int64) (deck.Details, error)
@@ -44,6 +46,8 @@ type DeckRepositoryImpl struct {
 	AddDeckSubscriptionStmt    *sql.Stmt
 	RemoveDeckSubscriptionStmt *sql.Stmt
 	CheckOwnerStmt             *sql.Stmt
+
+	ShopTopNStmt *sql.Stmt
 
 	DeckDetailsOwnerStmt *sql.Stmt
 	DeckDetailsShopStmt  *sql.Stmt
@@ -119,6 +123,17 @@ func (repo *DeckRepositoryImpl) InitStatements() error {
 	}
 
 	repo.RemoveDeckSubscriptionStmt, err = repo.db.Prepare("DELETE FROM ACC_DECK WHERE acc_id = (SELECT acc_id FROM ACCOUNT WHERE token = ?) AND deck_id = ?")
+	if err != nil {
+		return err
+	}
+
+	repo.ShopTopNStmt, err = repo.db.Prepare(`SELECT
+												DECK.*
+											FROM DECK
+											LEFT JOIN ACCOUNT ON DECK.acc_id = ACCOUNT.acc_id
+											WHERE DECK.visible = true AND ACCOUNT.token != ?
+											ORDER BY updated_at DESC
+											LIMIT ?;`)
 	if err != nil {
 		return err
 	}
@@ -377,6 +392,15 @@ func (r *DeckRepositoryImpl) CheckOwnership(deckID int64, token string) bool {
 	row := r.CheckOwnerStmt.QueryRow(deckID, token)
 	_, err := scanDeck(row)
 	return err == nil
+}
+
+func (r *DeckRepositoryImpl) ShopTopN(token string, quantity int32) ([]Deck, error) {
+	rows, err := r.ShopTopNStmt.Query(token, quantity)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return scanDecks(rows)
 }
 
 func (r *DeckRepositoryImpl) DeckDetailsSubscription(deckID int64, token string) (deck.Details, error) {

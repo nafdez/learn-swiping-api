@@ -20,6 +20,9 @@ type DeckService interface {
 	Delete(deckID int64, token string) error
 	AddDeckSubscription(deck.DeckSuscriptionRequest) error
 	RemoveDeckSubscription(deck.DeckSuscriptionRequest) error
+
+	ShopTopN(token string, quantity int32) ([]Deck, error)
+
 	DeckDetails(mode int8, deckID int64, token string) (deck.Details, error)
 
 	SaveRating(deckID int64, rating int8, token string) error
@@ -139,6 +142,13 @@ func (s *DeckServiceImpl) AddDeckSubscription(request deck.DeckSuscriptionReques
 
 func (s *DeckServiceImpl) RemoveDeckSubscription(request deck.DeckSuscriptionRequest) error {
 	return s.repository.RemoveDeckSubscription(request.Token, request.DeckID)
+}
+
+func (s *DeckServiceImpl) ShopTopN(token string, quantity int32) ([]Deck, error) {
+	if quantity >= 1000 {
+		return []Deck{}, erro.ErrBadField
+	}
+	return s.repository.ShopTopN(token, quantity)
 }
 
 func (s *DeckServiceImpl) DeckDetails(mode int8, deckID int64, token string) (deck.Details, error) {
